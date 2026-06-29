@@ -23,6 +23,14 @@
     object-fit: contain !important;
     display: block;
 }
+
+.widget-dashboard .nav-link.account-active {
+    color: #08c !important;
+    font-weight: 700;
+    background: #f4f9fc;
+    border-left: 3px solid #08c;
+    padding-left: 12px;
+}
 </style>
 
 <script setup lang="ts">
@@ -44,12 +52,13 @@ usePortoScripts(myShopScripts)
 
 import { ref, onMounted } from 'vue'
 import axios from 'axios'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import type { nguoidung } from '@/models/nguoidung';
 
 const isLoggedIn = ref(false)
 const user = ref<nguoidung | null>(null)
 const router = useRouter()
+const route = useRoute()
 const mahh = ref('')
 const search = ref('')
 
@@ -109,7 +118,7 @@ onMounted(async () => {
                                     <li><router-link to="/Taikhoan">
                                             Tài khoản
                                         </router-link></li>
-                                    <li><router-link to="/Lichsudonhang">
+                                    <li><router-link to="/Taikhoan/Donhang">
                                             Lịch sử đơn hàng
                                         </router-link></li>
                                     <li><router-link to="/Taikhoan">
@@ -283,14 +292,14 @@ onMounted(async () => {
                         <h2 class="text-uppercase">Tài khoản của tôi</h2>
                         <ul class="nav nav-tabs list flex-column mb-0" role="tablist">
                             <li class="nav-item">
-                                <router-link to="/Taikhoan" class="nav-link" id="edit-tab" aria-controls="edit"
+                                <router-link to="/Taikhoan" class="nav-link" :class="{ 'account-active': route.name === 'Taikhoan' }" id="edit-tab" aria-controls="edit"
                                     aria-selected="false" style="text-transform:none;">
                                     Thông tin tài khoản
                                 </router-link>
                             </li>
 
                             <li class="nav-item">
-                                <router-link to="/Lichsudonhang" class="nav-link" id="order-tab" aria-controls="order"
+                                <router-link to="/Taikhoan/Donhang" class="nav-link" :class="{ 'account-active': route.name === 'Hoadon' }" id="order-tab" aria-controls="order"
                                     aria-selected="true" style="text-transform:none;">
                                     Đơn hàng của tôi
                                 </router-link>

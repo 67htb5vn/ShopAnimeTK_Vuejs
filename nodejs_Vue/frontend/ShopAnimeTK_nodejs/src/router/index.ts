@@ -9,7 +9,7 @@ import DetailSanpham from '@/views/DetailSanpham.vue'
 import Dangnhap from '@/views/Dangnhap.vue'
 import Taikhoan from '@/views/Taikhoan.vue'
 import TaikhoanLayout from '@/layouts/TaikhoanLayout.vue'
-import Lichsudonhang from '@/views/Lichsudonhang.vue'
+import Hoadon from '@/views/Hoadon.vue'
 import Giohang from '@/views/Giohang.vue'
 import Thanhtoan from '@/views/Thanhtoan.vue'
 import Dathangthanhcong from '@/views/Dathangthanhcong.vue'
@@ -70,13 +70,19 @@ const routes = [
         children: [
             {
                 path: '',
+                name: 'Taikhoan',
                 component: Taikhoan
+            },
+            {
+                path: 'Donhang',
+                name: 'Hoadon',
+                component: Hoadon
             }
         ]
     },
     {
         path: '/Lichsudonhang',
-        component: Lichsudonhang
+        redirect: '/Taikhoan/Donhang'
     },
     {
         path: '/HomeUser',

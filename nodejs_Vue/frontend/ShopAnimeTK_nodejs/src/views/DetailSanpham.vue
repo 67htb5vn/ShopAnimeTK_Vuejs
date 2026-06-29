@@ -195,6 +195,7 @@ import noUiSlider from 'nouislider';
 import 'nouislider/dist/nouislider.css';
 import { useGiohangStore } from '@/stores/XemnhanhGiohang'
 import Danhgia from '@/components/Danhgia/Danhgia.vue'
+import { getProductImagePaths, handleProductImageError } from '@/utils/productImage'
 
 const giohangStore = useGiohangStore()
 
@@ -230,15 +231,15 @@ const updateReviewSummary = (summary: { count: number; average: number }) => {
 }
 
 const getAnhByLoai = (sp: SanPhamVoiChiTiet, loai: number) => {
-    if (!sp.hinhanhsps) return 'https://via.placeholder.com/160';
-
-    const anh = sp.hinhanhsps.find(x => Number(x.anhdaidien) === loai);
-
-    if (anh && anh.duongdan) {
-        let path = anh.duongdan;
-        return path;
-    }
+    const images = getProductImagePaths(sp)
+    return loai === 2 ? images.hover : images.main
 };
+
+const productImages = computed(() => {
+    if (!sp.value) return []
+    const images = getProductImagePaths(sp.value)
+    return images.all.length ? images.all : [images.main]
+})
 
 const formatCurrency = (value: number | undefined) => {
     if (!value) return '0';
@@ -413,11 +414,11 @@ watch(
                             </div>
 
                             <div class="product-single-carousel owl-carousel owl-theme show-nav-hover">
-                                <div v-for="image in sp?.hinhanhsps">
+                                <div v-for="(image, index) in productImages" :key="`${image}-${index}`">
                                     <div class="product-item">
-                                        <img class="product-single-image" :src="`${image.duongdan}`"
-                                            :data-zoom-image="`${image.duongdan}`" width="468" height="468"
-                                            alt="product" />
+                                        <img class="product-single-image" :src="image"
+                                            :data-zoom-image="image" width="468" height="468"
+                                            :alt="sp?.tensp || 'Sản phẩm'" @error="handleProductImageError" />
                                     </div>
                                 </div>
                             </div>
@@ -428,11 +429,11 @@ watch(
                         </div>
 
                         <div class="prod-thumbnail owl-dots">
-                            <div v-for="image in sp?.hinhanhsps">
+                            <div v-for="(image, index) in productImages" :key="`thumb-${image}-${index}`">
                                 <div class="owl-dot">
-                                    <img class="product-single-image" :src="`${image.duongdan}`"
-                                        :data-zoom-image="`${image.duongdan}`" width="110" height="110"
-                                        alt="product-thumbnail" />
+                                    <img class="product-single-image" :src="image"
+                                        :data-zoom-image="image" width="110" height="110"
+                                        :alt="`${sp?.tensp || 'Sản phẩm'} - ảnh ${index + 1}`" @error="handleProductImageError" />
                                 </div>
                             </div>
                             <!-- @foreach (var image in Model.Hinhanhsps)

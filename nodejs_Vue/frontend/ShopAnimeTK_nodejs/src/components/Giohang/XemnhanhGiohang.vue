@@ -5,10 +5,13 @@ import { RouterLink, useRoute, useRouter } from 'vue-router';
 import type { sanpham } from '@/models/sanpham';
 import type { sanphamgiohang } from '@/models/sanphamgiohang';
 import { useGiohangStore } from '@/stores/XemnhanhGiohang'
+import { normalizeProductImagePath, productPlaceholderImage, handleProductImageError } from '@/utils/productImage'
 
 const giohangStore = useGiohangStore()
 const isLoggedIn = ref(false)
 const Xoasp = ref<sanphamgiohang>()
+
+const cartImage = (path?: string) => normalizeProductImagePath(path) || productPlaceholderImage
 
 const formatCurrency = (value: number | undefined) => {
     if (!value) return '0';
@@ -64,7 +67,8 @@ onMounted(() => {
                         <figure class="product-image-container">
                             <router-link :to="`/chitiet/${spgh.tensp?.toLowerCase()}_${spgh.masp}`"
                                 class="product-image">
-                                <!-- <img :src="`${spgh.duongdan}`" alt="product" width="80" height="80"> -->
+                                <img :src="cartImage(spgh.duongdan)" :alt="spgh.tensp || 'Sản phẩm'"
+                                    width="80" height="80" @error="handleProductImageError">
                             </router-link>
 
                             <a href="javascript:;" class="btn-remove" title="Xóa sản phẩm"

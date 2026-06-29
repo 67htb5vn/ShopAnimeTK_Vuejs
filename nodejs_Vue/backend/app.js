@@ -767,6 +767,11 @@ app.post('/api/orders', requireUser, async (req, res) => {
             `, [detail.masp, mahd, detail.gia, detail.soluong])
         }
 
+        await client.query(`
+            INSERT INTO public.cttrangthai (mahd, matt, ngaycapnhat)
+            VALUES ($1, 'TT001', CURRENT_TIMESTAMP)
+        `, [mahd])
+
         await client.query('COMMIT')
 
         const purchasedIds = new Set(details.map(item => item.masp))
@@ -789,6 +794,125 @@ app.post('/api/orders', requireUser, async (req, res) => {
         await client.query('ROLLBACK')
         console.error(error)
         res.status(500).json({ message: error.message || 'Không thể tạo đơn hàng' })
+    } finally {
+        client.release()
+    }
+})
+
+app.get('/api/orders', requireUser, async (req, res) => {
+    try {
+        const allowedStatuses = new Set(['TT001', 'TT002', 'TT003', 'TT004', 'TT005'])
+        const statuses = String(req.query.statuses || 'TT001')
+            .split(',')
+            .map(status => status.trim().toUpperCase())
+            .filter(status => allowedStatuses.has(status))
+        const pageSize = Math.min(20, Math.max(1, Number.parseInt(req.query.pageSize, 10) || 4))
+        const page = Math.max(1, Number.parseInt(req.query.page, 10) || 1)
+        const offset = (page - 1) * pageSize
+
+        if (statuses.length === 0) {
+            return res.status(400).json({ message: 'Trạng thái hóa đơn không hợp lệ' })
+        }
+
+        const result = await pool.query(`
+            WITH order_data AS (
+                SELECT TRIM(hd.mahd) AS mahd, hd.ngaylap, hd.thanhtien, hd.htthanhtoan,
+                       latest.matt, latest.tentrangthai, latest.ngaycapnhat,
+                       COALESCE(products.items, '[]'::json) AS products
+                FROM public.hoadon hd
+                JOIN LATERAL (
+                    SELECT TRIM(ct.matt) AS matt, tt.tentrangthai, ct.ngaycapnhat
+                    FROM public.cttrangthai ct
+                    LEFT JOIN public.trangthai tt ON TRIM(tt.matt) = TRIM(ct.matt)
+                    WHERE TRIM(ct.mahd) = TRIM(hd.mahd)
+                    ORDER BY ct.ngaycapnhat DESC NULLS LAST
+                    LIMIT 1
+                ) latest ON TRUE
+                LEFT JOIN LATERAL (
+                    SELECT json_agg(json_build_object(
+                        'masp', p.masp,
+                        'tensp', p.tensp,
+                        'soluong', p.soluong,
+                        'hinhanh', p.hinhanh
+                    )) AS items
+                    FROM (
+                        SELECT TRIM(ct.masp) AS masp, sp.tensp, ct.soluong,
+                               (
+                                   SELECT ha.duongdan
+                                   FROM public.hinhanhsp ha
+                                   WHERE TRIM(ha.masp) = TRIM(ct.masp)
+                                   ORDER BY CASE WHEN ha.anhdaidien = 1 THEN 0 ELSE 1 END, ha.maha
+                                   LIMIT 1
+                               ) AS hinhanh
+                        FROM public.cthoadon ct
+                        LEFT JOIN public.sanpham sp ON TRIM(sp.masp) = TRIM(ct.masp)
+                        WHERE TRIM(ct.mahd) = TRIM(hd.mahd)
+                        ORDER BY TRIM(ct.masp)
+                        LIMIT 2
+                    ) p
+                ) products ON TRUE
+                WHERE TRIM(hd.mand) = $1
+                  AND latest.matt = ANY($2::text[])
+            )
+            SELECT *, COUNT(*) OVER()::integer AS total_count
+            FROM order_data
+            ORDER BY COALESCE(ngaycapnhat, ngaylap::timestamp) DESC, mahd DESC
+            LIMIT $3 OFFSET $4
+        `, [req.session.user.mand.trim(), statuses, pageSize, offset])
+
+        const totalItems = result.rows[0]?.total_count || 0
+        const items = result.rows.map(({ total_count, ...order }) => order)
+        res.json({
+            items,
+            page,
+            pageSize,
+            totalItems,
+            totalPages: Math.max(1, Math.ceil(totalItems / pageSize))
+        })
+    } catch (error) {
+        console.error(error)
+        res.status(500).json({ message: 'Không thể tải lịch sử đơn hàng' })
+    }
+})
+
+app.patch('/api/orders/:mahd/cancel', requireUser, async (req, res) => {
+    const client = await pool.connect()
+    try {
+        await client.query('BEGIN')
+        const orderResult = await client.query(`
+            SELECT TRIM(hd.mahd) AS mahd,
+                   (
+                       SELECT TRIM(ct.matt)
+                       FROM public.cttrangthai ct
+                       WHERE TRIM(ct.mahd) = TRIM(hd.mahd)
+                       ORDER BY ct.ngaycapnhat DESC NULLS LAST
+                       LIMIT 1
+                   ) AS matt
+            FROM public.hoadon hd
+            WHERE TRIM(hd.mahd) = $1 AND TRIM(hd.mand) = $2
+            FOR UPDATE
+        `, [req.params.mahd.trim(), req.session.user.mand.trim()])
+        const order = orderResult.rows[0]
+
+        if (!order) {
+            await client.query('ROLLBACK')
+            return res.status(404).json({ message: 'Không tìm thấy đơn hàng' })
+        }
+        if (order.matt !== 'TT001') {
+            await client.query('ROLLBACK')
+            return res.status(409).json({ message: 'Đơn hàng này không còn có thể hủy' })
+        }
+
+        await client.query(`
+            INSERT INTO public.cttrangthai (mahd, matt, ngaycapnhat)
+            VALUES ($1, 'TT005', CURRENT_TIMESTAMP)
+        `, [order.mahd])
+        await client.query('COMMIT')
+        res.json({ success: true, message: 'Đã hủy đơn hàng' })
+    } catch (error) {
+        await client.query('ROLLBACK')
+        console.error(error)
+        res.status(500).json({ message: 'Không thể hủy đơn hàng' })
     } finally {
         client.release()
     }

@@ -7,6 +7,7 @@ import { useGiohangStore } from '@/stores/XemnhanhGiohang'
 import Tamtinhdonhang from '@/components/Giohang/Tamtinhdonhang.vue'
 import Khuyenmai from '@/components/Khuyenmai/Khuyenmai.vue'
 import { useThanhtoanStore } from '@/stores/Thanhtoan'
+import { normalizeProductImagePath, productPlaceholderImage, handleProductImageError } from '@/utils/productImage'
 
 const giohangStore = useGiohangStore()
 const thanhtoanStore = useThanhtoanStore()
@@ -32,6 +33,8 @@ const formatCurrency = (value: number | undefined) =>
         style: 'currency',
         currency: 'VND'
     }).format(Number(value ?? 0))
+
+const cartImage = (path?: string) => normalizeProductImagePath(path) || productPlaceholderImage
 
 const productLink = (item: sanphamgiohang) =>
     `/chitiet/${encodeURIComponent(`${item.tensp?.toLowerCase() ?? 'san-pham'}_${item.masp ?? ''}`)}`
@@ -159,7 +162,7 @@ onMounted(async () => {
                                     <td>
                                         <figure class="product-image-container">
                                             <router-link :to="productLink(item)" class="product-image">
-                                                <img :src="item.duongdan" :alt="item.tensp || 'Sản phẩm'">
+                                                <img :src="cartImage(item.duongdan)" :alt="item.tensp || 'Sản phẩm'" @error="handleProductImageError">
                                             </router-link>
                                             <button type="button" class="btn-remove icon-cancel" title="Xóa sản phẩm"
                                                 :disabled="item.masp ? updatingProducts.includes(item.masp) : true"

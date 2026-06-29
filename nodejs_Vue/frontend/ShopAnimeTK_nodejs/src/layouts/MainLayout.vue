@@ -117,7 +117,7 @@ onMounted(async () => {
                                     <li><router-link to="/Taikhoan">
                                             Tài khoản
                                         </router-link></li>
-                                    <li><router-link to="/Lichsudonhang">
+                                    <li><router-link to="/Taikhoan/Donhang">
                                             Lịch sử đơn hàng
                                         </router-link></li>
                                     <li><router-link to="/Giohang">

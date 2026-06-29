@@ -16,16 +16,18 @@ li.active a {
 
 .my-product-image {
     display: block;
-    width: 280px !important;
-    height: 280px !important;
+    width: 100% !important;
+    max-width: 280px;
+    aspect-ratio: 1 / 1;
     overflow: hidden;
     position: relative;
+    background: #fff;
 }
 
 .my-product-image img {
     width: 100% !important;
     height: 100% !important;
-    object-fit: cover;
+    object-fit: contain;
     display: block;
 }
 
@@ -53,6 +55,7 @@ import { ref, onMounted, watch, computed } from 'vue';
 import axios from 'axios';
 import { RouterLink, useRoute, useRouter } from 'vue-router';
 import type { sanpham } from '@/models/sanpham';
+import { getProductImagePaths, handleProductImageError } from '@/utils/productImage'
 import type { danhmuchang } from '@/models/danhmuchang';
 import noUiSlider from 'nouislider';
 import 'nouislider/dist/nouislider.css';
@@ -76,14 +79,8 @@ const tendmh = ref<string>('');
 const priceSlider = ref<HTMLElement | null>(null);
 
 const getAnhByLoai = (sp: SanPhamVoiChiTiet, loai: number) => {
-    if (!sp.hinhanhsps) return 'https://via.placeholder.com/160';
-
-    const anh = sp.hinhanhsps.find(x => Number(x.anhdaidien) === loai);
-
-    if (anh && anh.duongdan) {
-        let path = anh.duongdan;
-        return path;
-    }
+    const images = getProductImagePaths(sp)
+    return loai === 2 ? images.hover : images.main
 };
 
 const formatCurrency = (value: number | undefined) => {
@@ -265,8 +262,8 @@ watch(
                                         <router-link
                                             :to="`/chitiet/${sp.tensp?.toLowerCase().replace(/\s+/g, '-')}_${sp.masp}`"
                                             :title="sp.tensp" class="my-product-image">
-                                            <img :src="getAnhByLoai(sp, 1)" alt="product main" />
-                                            <img :src="getAnhByLoai(sp, 2)" alt="product hover" class="hover-image" />
+                                            <img :src="getAnhByLoai(sp, 1)" :alt="sp.tensp || 'Sản phẩm'" @error="handleProductImageError" />
+                                            <img :src="getAnhByLoai(sp, 2)" :alt="`${sp.tensp || 'Sản phẩm'} - ảnh phụ`" class="hover-image" @error="handleProductImageError" />
                                         </router-link>
                                         <!--Nhãn giảm giá-->
                                         <div class="label-group">
