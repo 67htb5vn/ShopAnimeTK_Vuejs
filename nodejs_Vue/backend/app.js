@@ -581,6 +581,51 @@ app.get('/api/reviews/:masp', async (req, res) => {
     }
 });
 
+app.post('/api/reviews/:masp', requireUser, async (req, res) => {
+    const content = String(req.body.noidung || '').trim()
+    const rating = Number(req.body.sao)
+    const masp = String(req.params.masp || '').trim()
+
+    if (!masp || !content || content.length > 500 || !Number.isInteger(rating) || rating < 1 || rating > 5) {
+        return res.status(400).json({ message: 'Nội dung hoặc số sao đánh giá không hợp lệ' })
+    }
+
+    const client = await pool.connect()
+    try {
+        await client.query('BEGIN')
+        await client.query("SELECT pg_advisory_xact_lock(hashtext('shopanime_danhgia_madg'))")
+
+        const product = await client.query(
+            'SELECT 1 FROM public.sanpham WHERE TRIM(masp) = $1 LIMIT 1',
+            [masp]
+        )
+        if (!product.rows[0]) {
+            await client.query('ROLLBACK')
+            return res.status(404).json({ message: 'Không tìm thấy sản phẩm' })
+        }
+
+        const idResult = await client.query(`
+            SELECT COALESCE(MAX(NULLIF(regexp_replace(TRIM(madg), '\\D', '', 'g'), '')::integer), 0) + 1 AS next_id
+            FROM public.danhgia
+        `)
+        const madg = `DG${String(idResult.rows[0].next_id).padStart(3, '0')}`
+
+        await client.query(`
+            INSERT INTO public.danhgia (madg, noidung, sao, thoigian, mand, masp)
+            VALUES ($1, $2, $3, CURRENT_DATE, $4, $5)
+        `, [madg, content, rating, req.session.user.mand.trim(), masp])
+        await client.query('COMMIT')
+
+        res.status(201).json({ success: true, madg })
+    } catch (error) {
+        await client.query('ROLLBACK')
+        console.error(error)
+        res.status(500).json({ message: 'Không thể tạo đánh giá' })
+    } finally {
+        client.release()
+    }
+})
+
 app.get('/api/addresses', requireUser, async (req, res) => {
     try {
         const result = await pool.query(`

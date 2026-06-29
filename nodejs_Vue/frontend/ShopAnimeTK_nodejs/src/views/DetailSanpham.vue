@@ -102,6 +102,15 @@
     appearance: none;
 }
 
+/* Fallback cho SPA: vẫn hiện ảnh chính nếu Owl Carousel chưa kịp khởi tạo sau khi API trả dữ liệu. */
+.product-single-carousel:not(.owl-loaded) {
+    display: block !important;
+}
+
+.product-single-carousel:not(.owl-loaded) > div:not(:first-child) {
+    display: none;
+}
+
 .product-action {
     display: flex !important;
     align-items: center !important;
@@ -275,7 +284,7 @@ const loadSanphamChitiet = async () => {
         })
 
         isLoggedIn.value = res.data.loggedIn
-        if (isLoggedIn.value) await giohangStore.loadGiohang()
+        if (isLoggedIn.value) void giohangStore.loadGiohang()
 
         const response = await axios.get('/api/loadSanphamChitiet', {
             params: {

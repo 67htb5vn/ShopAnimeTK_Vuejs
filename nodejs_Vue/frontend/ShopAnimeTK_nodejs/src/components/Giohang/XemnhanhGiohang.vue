@@ -80,8 +80,8 @@ onMounted(() => {
                         <figure class="product-image-container">
                             <router-link :to="`/chitiet/${spgh.tensp?.toLowerCase()}_${spgh.masp}`"
                                 class="product-image">
-                                <img :src="cartImage(spgh.duongdan)" :alt="spgh.tensp || 'Sản phẩm'"
-                                    width="80" height="80" @error="handleProductImageError">
+                                <img :src="cartImage(spgh.duongdan)" :alt="spgh.tensp || 'Sản phẩm'" width="80"
+                                    height="80" @error="handleProductImageError">
                             </router-link>
 
                             <a href="javascript:;" class="btn-remove" title="Xóa sản phẩm"

@@ -28,9 +28,11 @@ export const useGiohangStore = defineStore('giohang', () => {
         }
     }
 
-    const tongSoLuong = computed(() =>
-        giohangs.value.reduce((s, x) => s + (x.soluong ?? 0), 0)
-    )
+    const tongSoLuong = computed(() => new Set(
+        giohangs.value
+            .map(item => String(item.masp || '').trim())
+            .filter(Boolean)
+    ).size)
 
     const xoaGiohang = async (masp: string) => {
           const res = await axios.delete('/api/deleteGiohang', {
