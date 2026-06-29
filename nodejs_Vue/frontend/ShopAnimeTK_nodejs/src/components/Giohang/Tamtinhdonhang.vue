@@ -19,11 +19,9 @@ const tienGiam = computed(() => {
 
 const tongDonHang = computed(() => Math.max(0, props.tamTinh - tienGiam.value))
 
-const formatCurrency = (value: number) =>
-    new Intl.NumberFormat('vi-VN', {
-        style: 'currency',
-        currency: 'VND'
-    }).format(value)
+const formatCurrency = (value: number) => new Intl.NumberFormat('vi-VN', {
+    style: 'currency', currency: 'VND'
+}).format(value)
 </script>
 
 <template>
@@ -37,23 +35,27 @@ const formatCurrency = (value: number) =>
                     <td>{{ formatCurrency(tamTinh) }}</td>
                 </tr>
                 <tr>
-                    <td colspan="2" class="text-left">
-                        <h4>Khuyến mãi</h4>
-                        <div v-if="khuyenMai" class="promotion-selected">
-                            <div>
-                                <strong>{{ khuyenMai.makm }}</strong>
-                                <span>{{ khuyenMai.tenkm }}</span>
+                    <td colspan="2">
+                        <div class="promotion-row">
+                            <h4>Khuyến mãi</h4>
+                            <div v-if="khuyenMai" class="promotion-selected">
+                                <div>
+                                    <strong>{{ khuyenMai.makm }}</strong>
+                                    <span>{{ khuyenMai.tenkm }}</span>
+                                </div>
+                                <button
+                                    type="button"
+                                    class="btn-remove-promotion"
+                                    title="Hủy khuyến mãi"
+                                    @click="emit('xoaKhuyenMai')"
+                                >×</button>
                             </div>
-                            <button type="button" class="btn-remove-promotion" title="Hủy khuyến mãi"
-                                @click="emit('xoaKhuyenMai')">×</button>
+                            <span v-else class="promotion-empty">Chưa áp dụng voucher</span>
                         </div>
-                        <span v-else class="text-muted">Chưa áp dụng voucher</span>
                     </td>
                 </tr>
                 <tr>
-                    <td>
-                        <h4>Tiền giảm</h4>
-                    </td>
+                    <td><h4>Tiền giảm</h4></td>
                     <td class="discount">-{{ formatCurrency(tienGiam) }}</td>
                 </tr>
             </tbody>
@@ -67,22 +69,42 @@ const formatCurrency = (value: number) =>
 
         <div class="checkout-methods">
             <button type="button" class="btn btn-block btn-dark" :disabled="tamTinh <= 0" @click="emit('thanhToan')">
-                Thanh toán
-                <i class="fa fa-arrow-right"></i>
+                Thanh toán <i class="fa fa-arrow-right"></i>
             </button>
         </div>
     </div>
 </template>
 
 <style scoped>
-.promotion-selected {
+.table-totals td:last-child { text-align: right; }
+
+.promotion-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 1.5rem;
+    width: 100%;
+}
+
+.promotion-row h4 {
+    flex: 0 0 auto;
+    margin: 0;
+    text-align: left;
+}
+
+.promotion-empty {
+    margin-left: auto;
+    color: #777;
+    text-align: right;
+}
+
+.promotion-selected {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
     gap: 1rem;
-    margin-top: 0.8rem;
-    padding: 1rem;
-    background: #f4f4f4;
+    margin-left: auto;
+    text-align: right;
 }
 
 .promotion-selected span {
@@ -100,7 +122,5 @@ const formatCurrency = (value: number) =>
     cursor: pointer;
 }
 
-.discount {
-    color: #dc3545;
-}
+.discount { color: #dc3545; }
 </style>

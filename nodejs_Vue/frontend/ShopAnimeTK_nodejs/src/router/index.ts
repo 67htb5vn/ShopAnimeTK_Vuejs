@@ -12,6 +12,7 @@ import TaikhoanLayout from '@/layouts/TaikhoanLayout.vue'
 import Lichsudonhang from '@/views/Lichsudonhang.vue'
 import Giohang from '@/views/Giohang.vue'
 import Thanhtoan from '@/views/Thanhtoan.vue'
+import Dathangthanhcong from '@/views/Dathangthanhcong.vue'
 
 const routes = [
     {
@@ -51,6 +52,11 @@ const routes = [
                 path: 'Thanhtoan',
                 name: 'Thanhtoan',
                 component: Thanhtoan
+            },
+            {
+                path: 'Dathangthanhcong/:mahd',
+                name: 'Dathangthanhcong',
+                component: Dathangthanhcong
             }
         ],
     },

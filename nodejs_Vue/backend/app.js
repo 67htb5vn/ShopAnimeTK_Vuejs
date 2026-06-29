@@ -492,6 +492,36 @@ app.get('/api/checkauth', (req, res) => {
     });
 });
 
+app.get('/api/reviews/:masp', async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT TRIM(dg.madg) AS madg, dg.noidung, dg.sao, dg.thoigian,
+                   TRIM(dg.mand) AS mand, TRIM(dg.masp) AS masp,
+                   COALESCE(nd.ten, 'Người dùng') AS tennguoidung,
+                   (
+                       SELECT ha.duongdan
+                       FROM public.hinhanhnd ha
+                       WHERE TRIM(ha.mand) = TRIM(dg.mand)
+                       LIMIT 1
+                   ) AS avatar
+            FROM public.danhgia dg
+            LEFT JOIN public.nguoidung nd ON TRIM(nd.mand) = TRIM(dg.mand)
+            WHERE TRIM(dg.masp) = $1
+            ORDER BY dg.thoigian DESC, dg.madg DESC
+        `, [req.params.masp.trim()])
+
+        const count = result.rows.length
+        const average = count
+            ? result.rows.reduce((sum, review) => sum + Number(review.sao || 0), 0) / count
+            : 0
+
+        res.json({ reviews: result.rows, count, average })
+    } catch (error) {
+        console.error(error)
+        res.status(500).json({ message: 'Không thể tải đánh giá sản phẩm' })
+    }
+});
+
 const requireUser = (req, res, next) => {
     if (!req.session.user) {
         return res.status(401).json({ message: 'Vui lòng đăng nhập' })
@@ -581,6 +611,229 @@ app.post('/api/checkout-address', requireUser, (req, res) => {
         if (error) return res.status(500).json({ message: 'Không thể lưu địa chỉ vào session' })
         res.json(req.session.checkoutAddress)
     })
+})
+
+const isHanoiAddress = (province = '') => province
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd')
+    .trim()
+    .toLowerCase() === 'ha noi'
+
+app.post('/api/checkout-session', requireUser, async (req, res) => {
+    try {
+        const { address, paymentMethod, promotionCode, products } = req.body
+        if (!address?.ten || !/^0\d{9}$/.test(address?.sodienthoai || '') || !address?.tinh_tp || !address?.diachinha) {
+            return res.status(400).json({ message: 'Địa chỉ giao hàng không hợp lệ' })
+        }
+
+        const paymentLabels = {
+            bank: 'Chuyển khoản ngân hàng',
+            cod: 'Thanh toán khi nhận hàng'
+        }
+        if (!paymentLabels[paymentMethod]) {
+            return res.status(400).json({ message: 'Hình thức thanh toán không hợp lệ' })
+        }
+
+        const selectedIds = new Set((products || []).map(item => String(item.masp || '').trim()))
+        const cart = req.session.giohang || []
+        const selectedProducts = cart
+            .filter(item => selectedIds.has(String(item.masp || '').trim()))
+            .map(item => ({ masp: String(item.masp || '').trim(), soluong: Number(item.soluong) }))
+            .filter(item => item.masp && Number.isInteger(item.soluong) && item.soluong > 0)
+
+        if (selectedProducts.length === 0) {
+            return res.status(400).json({ message: 'Không có sản phẩm được chọn' })
+        }
+
+        const productResult = await pool.query(`
+            SELECT TRIM(masp) AS masp, gia
+            FROM public.sanpham
+            WHERE TRIM(masp) = ANY($1::text[])
+        `, [selectedProducts.map(item => item.masp)])
+        const prices = new Map(productResult.rows.map(item => [item.masp, Number(item.gia)]))
+        const subtotal = selectedProducts.reduce(
+            (total, item) => total + Number(prices.get(item.masp) || 0) * item.soluong,
+            0
+        )
+
+        let selectedPromotion = null
+        if (promotionCode) {
+            const promotionResult = await pool.query(`
+                SELECT TRIM(makm) AS makm, tenkm, mucgiam, giatri
+                FROM public.khuyenmai
+                WHERE TRIM(makm) = $1
+                LIMIT 1
+            `, [String(promotionCode).trim()])
+            const promotion = promotionResult.rows[0]
+            if (!promotion || promotion.giatri == null || subtotal < Number(promotion.giatri)) {
+                return res.status(400).json({ message: 'Khuyến mãi không còn hợp lệ với đơn hàng' })
+            }
+            selectedPromotion = promotion
+        }
+
+        req.session.hinhthucthanhtoan = paymentLabels[paymentMethod]
+        req.session.diachiduocchon = {
+            ten: address.ten.trim(),
+            sodienthoai: address.sodienthoai,
+            tinh_tp: address.tinh_tp,
+            diachinha: address.diachinha.trim()
+        }
+        req.session.khuyenmaiduocchon = selectedPromotion
+        req.session.sanphamduocchon = selectedProducts
+
+        req.session.save((error) => {
+            if (error) return res.status(500).json({ message: 'Không thể lưu phiên thanh toán' })
+            res.json({ success: true })
+        })
+    } catch (error) {
+        console.error(error)
+        res.status(500).json({ message: 'Không thể chuẩn bị phiên thanh toán' })
+    }
+})
+
+app.post('/api/orders', requireUser, async (req, res) => {
+    const paymentMethod = req.session.hinhthucthanhtoan
+    const address = req.session.diachiduocchon
+    const promotion = req.session.khuyenmaiduocchon
+    const selectedProducts = req.session.sanphamduocchon || []
+
+    if (!paymentMethod || !address || selectedProducts.length === 0) {
+        return res.status(400).json({ message: 'Phiên thanh toán không đầy đủ hoặc đã hết hạn' })
+    }
+
+    const client = await pool.connect()
+    try {
+        await client.query('BEGIN')
+        await client.query("SELECT pg_advisory_xact_lock(hashtext('shopanime_hoadon_mahd'))")
+
+        const idResult = await client.query(`
+            SELECT COALESCE(MAX(NULLIF(regexp_replace(TRIM(mahd), '\\D', '', 'g'), '')::integer), 0) + 1 AS next_id
+            FROM public.hoadon
+        `)
+        const mahd = `HD${String(idResult.rows[0].next_id).padStart(3, '0')}`
+
+        const productResult = await client.query(`
+            SELECT TRIM(masp) AS masp, tensp, gia
+            FROM public.sanpham
+            WHERE TRIM(masp) = ANY($1::text[])
+            FOR UPDATE
+        `, [selectedProducts.map(item => item.masp)])
+        const productMap = new Map(productResult.rows.map(item => [item.masp, item]))
+
+        if (productMap.size !== selectedProducts.length) {
+            throw new Error('Một hoặc nhiều sản phẩm không còn tồn tại')
+        }
+
+        const details = selectedProducts.map(item => {
+            const product = productMap.get(item.masp)
+            return {
+                masp: item.masp,
+                tensp: product.tensp,
+                gia: Number(product.gia),
+                soluong: Number(item.soluong)
+            }
+        })
+        const subtotal = details.reduce((total, item) => total + item.gia * item.soluong, 0)
+
+        let validPromotion = null
+        if (promotion?.makm) {
+            const promotionResult = await client.query(`
+                SELECT TRIM(makm) AS makm, tenkm, mucgiam, giatri
+                FROM public.khuyenmai
+                WHERE TRIM(makm) = $1
+                LIMIT 1
+            `, [promotion.makm.trim()])
+            const currentPromotion = promotionResult.rows[0]
+            if (currentPromotion && currentPromotion.giatri != null && subtotal >= Number(currentPromotion.giatri)) {
+                validPromotion = currentPromotion
+            }
+        }
+
+        const discount = Math.round(subtotal * Number(validPromotion?.mucgiam || 0))
+        const shippingFee = isHanoiAddress(address.tinh_tp) ? 0 : 25_000
+        const total = Math.max(0, subtotal - discount + shippingFee)
+        const fullAddress = [address.ten, address.sodienthoai, address.tinh_tp, address.diachinha].join('_')
+
+        await client.query(`
+            INSERT INTO public.hoadon (mahd, ngaylap, diachi, thanhtien, htthanhtoan, mand, makm)
+            VALUES ($1, CURRENT_DATE, $2, $3, $4, $5, $6)
+        `, [mahd, fullAddress, total, paymentMethod, req.session.user.mand.trim(), validPromotion?.makm || null])
+
+        for (const detail of details) {
+            await client.query(`
+                INSERT INTO public.cthoadon (masp, mahd, gia, soluong)
+                VALUES ($1, $2, $3, $4)
+            `, [detail.masp, mahd, detail.gia, detail.soluong])
+        }
+
+        await client.query('COMMIT')
+
+        const purchasedIds = new Set(details.map(item => item.masp))
+        req.session.giohang = (req.session.giohang || []).filter(
+            item => !purchasedIds.has(String(item.masp || '').trim())
+        )
+        req.session.lastOrderId = mahd
+        delete req.session.hinhthucthanhtoan
+        delete req.session.diachiduocchon
+        delete req.session.khuyenmaiduocchon
+        delete req.session.sanphamduocchon
+        delete req.session.checkoutAddress
+
+        req.session.save((error) => {
+            if (error) console.error('Không thể dọn session sau đặt hàng:', error)
+        })
+
+        res.status(201).json({ mahd })
+    } catch (error) {
+        await client.query('ROLLBACK')
+        console.error(error)
+        res.status(500).json({ message: error.message || 'Không thể tạo đơn hàng' })
+    } finally {
+        client.release()
+    }
+})
+
+app.get('/api/orders/:mahd', requireUser, async (req, res) => {
+    try {
+        const orderResult = await pool.query(`
+            SELECT TRIM(mahd) AS mahd, ngaylap, diachi, thanhtien, htthanhtoan,
+                   TRIM(mand) AS mand, NULLIF(TRIM(makm), '') AS makm
+            FROM public.hoadon
+            WHERE TRIM(mahd) = $1 AND TRIM(mand) = $2
+            LIMIT 1
+        `, [req.params.mahd.trim(), req.session.user.mand.trim()])
+        const order = orderResult.rows[0]
+        if (!order) return res.status(404).json({ message: 'Không tìm thấy đơn hàng' })
+
+        const detailResult = await pool.query(`
+            SELECT TRIM(ct.masp) AS masp, sp.tensp, ct.gia, ct.soluong
+            FROM public.cthoadon ct
+            LEFT JOIN public.sanpham sp ON TRIM(sp.masp) = TRIM(ct.masp)
+            WHERE TRIM(ct.mahd) = $1
+        `, [order.mahd])
+
+        let promotion = null
+        if (order.makm) {
+            const promotionResult = await pool.query(`
+                SELECT TRIM(makm) AS makm, tenkm, mucgiam
+                FROM public.khuyenmai WHERE TRIM(makm) = $1 LIMIT 1
+            `, [order.makm])
+            promotion = promotionResult.rows[0] || null
+        }
+
+        const subtotal = detailResult.rows.reduce(
+            (sum, item) => sum + Number(item.gia) * Number(item.soluong), 0
+        )
+        const discount = Math.round(subtotal * Number(promotion?.mucgiam || 0))
+        const addressParts = String(order.diachi || '').split('_')
+        const shippingFee = isHanoiAddress(addressParts[2] || '') ? 0 : 25_000
+
+        res.json({ ...order, details: detailResult.rows, promotion, subtotal, discount, shippingFee })
+    } catch (error) {
+        console.error(error)
+        res.status(500).json({ message: 'Không thể tải đơn hàng' })
+    }
 })
 
 app.post('/api/logout', (req, res) => {

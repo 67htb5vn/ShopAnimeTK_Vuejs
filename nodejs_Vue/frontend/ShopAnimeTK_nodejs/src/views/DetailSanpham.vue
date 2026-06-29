@@ -102,6 +102,57 @@
     appearance: none;
 }
 
+.product-action {
+    display: flex !important;
+    align-items: center !important;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.product-action > div,
+.product-action .product-single-qty {
+    display: flex;
+    align-items: center;
+    margin: 0 !important;
+}
+
+.product-action .quantity-wrapper,
+.product-action .qty-btn,
+.product-action .qty-input,
+.product-action .add-cart,
+.product-action .nolog {
+    height: 48px !important;
+    min-height: 48px !important;
+    box-sizing: border-box !important;
+}
+
+.product-action .add-cart,
+.product-action .nolog {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    margin: 0 !important;
+    padding: 0 2.5rem !important;
+    line-height: 1 !important;
+}
+
+.product-action .qty-btn {
+    font-size: 0;
+}
+
+.product-action .qty-btn::before {
+    font-size: 1.7rem;
+    line-height: 1;
+}
+
+.product-action .qty-btn:first-child::before {
+    content: "−";
+}
+
+.product-action .qty-btn:last-child::before {
+    content: "+";
+}
+
 .cart-message {
     display: flex;
     align-items: center;
@@ -143,6 +194,7 @@ import type { sanpham } from '@/models/sanpham';
 import noUiSlider from 'nouislider';
 import 'nouislider/dist/nouislider.css';
 import { useGiohangStore } from '@/stores/XemnhanhGiohang'
+import Danhgia from '@/components/Danhgia/Danhgia.vue'
 
 const giohangStore = useGiohangStore()
 
@@ -168,6 +220,14 @@ const masp = slug.split('_').pop()
 const quantity = ref<number>(1)
 const isLoggedIn = ref(false)
 const isOverload = ref(false)
+const reviewCount = ref(0)
+const averageRating = ref(0)
+const activeTab = ref<'description' | 'reviews'>('description')
+
+const updateReviewSummary = (summary: { count: number; average: number }) => {
+    reviewCount.value = summary.count
+    averageRating.value = summary.average
+}
 
 const getAnhByLoai = (sp: SanPhamVoiChiTiet, loai: number) => {
     if (!sp.hinhanhsps) return 'https://via.placeholder.com/160';
@@ -422,16 +482,18 @@ watch(
                             </div>
                         </div>
 
-                        <!-- <div class="ratings-container">
+                        <div class="ratings-container">
                             <div class="product-ratings">
-                                <span class="ratings" :style="{ width: (sp?.diemtrungbinh || 0) * 20 + '%' }"></span>
+                                <span class="ratings" :style="{ width: averageRating * 20 + '%' }"></span>
 
                                 <span class="tooltiptext tooltip-top"></span>
                             </div>
 
 
-                            <a href="#" class="rating-link">( @ViewBag.SoDG Đánh giá )</a>
-                        </div> -->
+                            <a href="#product-reviews-content" class="rating-link" @click.prevent="activeTab = 'reviews'">
+                                ( {{ reviewCount }} Đánh giá )
+                            </a>
+                        </div>
 
                         <hr class="short-divider">
 
@@ -531,18 +593,19 @@ watch(
             <div class="product-single-tabs">
                 <ul class="nav nav-tabs" role="tablist">
                     <li class="nav-item">
-                        <a class="nav-link active" id="product-tab-desc" data-toggle="tab" href="#product-desc-content"
-                            role="tab" aria-controls="product-desc-content" aria-selected="true">Thông tin sản phẩm</a>
+                        <a class="nav-link" :class="{ active: activeTab === 'description' }" id="product-tab-desc"
+                            href="#product-desc-content" role="tab" @click.prevent="activeTab = 'description'">Thông tin sản phẩm</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" id="product-tab-reviews" data-toggle="tab" href="#product-reviews-content"
-                            role="tab" aria-controls="product-reviews-content" aria-selected="false">Đánh giá
-                            (@ViewBag.SoDG) </a>
+                        <a class="nav-link" :class="{ active: activeTab === 'reviews' }" id="product-tab-reviews"
+                            href="#product-reviews-content" role="tab" @click.prevent="activeTab = 'reviews'">
+                            Đánh giá ({{ reviewCount }})
+                        </a>
                     </li>
                 </ul>
 
                 <div class="tab-content">
-                    <div class="tab-pane fade show active" id="product-desc-content" role="tabpanel"
+                    <div v-show="activeTab === 'description'" class="tab-pane fade show active" id="product-desc-content" role="tabpanel"
                         aria-labelledby="product-tab-desc">
                         <div class="product-desc-content">
                             <p style="margin-bottom:15px;">
@@ -562,18 +625,18 @@ watch(
                         </div>
                         <!-- End .product-desc-content -->
                     </div>
-                    <div class="tab-pane fade show" id="product-reviews-content" role="tabpanel"
+                    <div v-show="activeTab === 'reviews'" class="tab-pane fade show active" id="product-reviews-content" role="tabpanel"
                         aria-labelledby="product-tab-reviews">
                         <div class="product-reviews-content">
-                            <h3 class="reviews-title">Đánh giá cho @Model.TenSp</h3>
+                            <h3 class="reviews-title">Đánh giá cho {{ sp?.tensp }}</h3>
 
                             <div class="comment-list">
-                                @await Component.InvokeAsync("Danhgia", new { idSp = Model.MaSp })
+                                <Danhgia :masp="sp?.masp" @summary="updateReviewSummary" />
                             </div>
 
                             <div class="divider"></div>
 
-                            <div class="add-product-review">
+                            <div v-if="false" class="add-product-review">
                                 <form asp-action="Create" asp-controller="DanhgiaUser" method="post"
                                     class="comment-form m-0">
                                     <input type="hidden" name="MaSp" id="MaSp" value="@Model.MaSp" />

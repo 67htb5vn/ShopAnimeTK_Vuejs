@@ -172,8 +172,8 @@ onMounted(async () => {
                                         </h5>
                                     </td>
                                     <td class="text-center">{{ formatCurrency(item.gia) }}</td>
-                                    <td>
-                                        <div class="product-single-qty quantity-control">
+                                    <td class="quantity-cell">
+                                        <div class="quantity-control">
                                             <button type="button" class="quantity-button" aria-label="Giảm số lượng"
                                                 :disabled="Number(item.soluong ?? 1) <= 1 || (item.masp ? updatingProducts.includes(item.masp) : true)"
                                                 @click="changeQuantity(item, -1)">−</button>
@@ -254,31 +254,92 @@ td .form-check-input {
 }
 
 .quantity-control {
-    display: flex;
-    align-items: stretch;
-    min-width: 110px;
+    display: inline-grid !important;
+    grid-template-columns: 38px 54px 38px;
+    align-items: center;
+    width: 130px !important;
+    min-width: 130px !important;
+    height: 46px;
+    margin: 0 auto !important;
+    padding: 0 !important;
+    overflow: hidden;
+    border: 1px solid #e1e1e1;
+    background: #fff;
+    box-sizing: border-box;
 }
 
 .quantity-control .quantity-input {
-    width: 55px;
-    min-width: 55px;
-    border-right: 0;
-    border-left: 0;
-    border-radius: 0;
-    text-align: center;
+    display: block !important;
+    width: 54px !important;
+    min-width: 54px !important;
+    max-width: 54px !important;
+    height: 44px !important;
+    min-height: 44px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border-width: 0 1px !important;
+    border-style: solid !important;
+    border-color: #e1e1e1 !important;
+    border-radius: 0 !important;
+    background: #fff !important;
+    color: #222529;
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 44px !important;
+    text-align: center !important;
+    box-shadow: none !important;
+    appearance: textfield;
+    box-sizing: border-box !important;
+}
+
+.quantity-control .quantity-input::-webkit-inner-spin-button,
+.quantity-control .quantity-input::-webkit-outer-spin-button {
+    margin: 0;
+    appearance: none;
 }
 
 .quantity-button {
-    width: 30px;
-    border: 1px solid #e7e7e7;
-    background: #fff;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    width: 38px !important;
+    min-width: 38px !important;
+    height: 44px !important;
+    min-height: 44px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: #fff !important;
     color: #222529;
-    font-size: 1.8rem;
+    font: inherit;
+    font-size: 0;
+    line-height: 1;
     cursor: pointer;
+    box-shadow: none !important;
+    box-sizing: border-box !important;
+}
+
+.quantity-button::before {
+    font-size: 1.6rem;
+    line-height: 1;
+}
+
+.quantity-button:first-child::before {
+    content: "−";
+}
+
+.quantity-button:last-child::before {
+    content: "+";
 }
 
 .quantity-button:disabled {
     cursor: not-allowed;
     opacity: 0.5;
+}
+
+.quantity-cell {
+    text-align: center;
+    vertical-align: middle !important;
 }
 </style>

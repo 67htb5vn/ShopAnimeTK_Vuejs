@@ -1,5 +1,5 @@
 <script setup lang="ts">
-defineProps<{ open: boolean; total: number }>()
+defineProps<{ open: boolean; total: number; loading?: boolean }>()
 const emit = defineEmits<{ close: []; confirm: [] }>()
 const formatCurrency = (value: number) => new Intl.NumberFormat('vi-VN', {
     style: 'currency', currency: 'VND'
@@ -25,7 +25,9 @@ const formatCurrency = (value: number) => new Intl.NumberFormat('vi-VN', {
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-light" @click="emit('close')">Đóng</button>
-                        <button type="button" class="btn btn-primary" @click="emit('confirm')">Xác nhận</button>
+                        <button type="button" class="btn btn-primary" :disabled="loading" @click="emit('confirm')">
+                            {{ loading ? 'Đang xử lý...' : 'Xác nhận' }}
+                        </button>
                     </div>
                 </div>
             </div>

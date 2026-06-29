@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, reactive, ref } from 'vue'
 import axios from 'axios'
+import { useRouter } from 'vue-router'
 import type { diachi } from '@/models/diachi'
 import { useThanhtoanStore } from '@/stores/Thanhtoan'
 import Diachi from '@/components/Thanhtoan/Diachi.vue'
@@ -8,11 +9,12 @@ import Donhangdathang from '@/components/Giohang/Donhangdathang.vue'
 import Donhangchuyenkhoan from '@/components/Giohang/Donhangchuyenkhoan.vue'
 
 const thanhtoanStore = useThanhtoanStore()
+const router = useRouter()
 const checkoutForm = ref<HTMLFormElement>()
 const paymentMethod = ref('bank')
 const transferOpen = ref(false)
 const errorMessage = ref('')
-const successMessage = ref('')
+const isSubmitting = ref(false)
 const note = ref('')
 
 const provinces = [
@@ -48,15 +50,36 @@ const saveCheckoutAddress = () => axios.post('/api/checkout-address', shippingAd
     withCredentials: true
 })
 
-const completeOrder = () => {
-    transferOpen.value = false
-    successMessage.value = 'Thông tin đặt hàng đã được xác nhận.'
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+const prepareCheckoutSession = () => axios.post('/api/checkout-session', {
+    address: shippingAddress,
+    paymentMethod: paymentMethod.value,
+    promotionCode: thanhtoanStore.promotion?.makm ?? null,
+    products: thanhtoanStore.products.map((item) => ({ masp: item.masp }))
+}, { withCredentials: true })
+
+const submitOrder = async () => {
+    if (isSubmitting.value) return
+    isSubmitting.value = true
+    errorMessage.value = ''
+
+    try {
+        const response = await axios.post('/api/orders', {}, { withCredentials: true })
+        const mahd = response.data.mahd
+        transferOpen.value = false
+        thanhtoanStore.clear()
+        await router.push(`/Dathangthanhcong/${mahd}`)
+    } catch (error) {
+        errorMessage.value = axios.isAxiosError(error)
+            ? error.response?.data?.message || 'Không thể tạo đơn hàng.'
+            : 'Không thể tạo đơn hàng.'
+        console.error(error)
+    } finally {
+        isSubmitting.value = false
+    }
 }
 
 const placeOrder = async () => {
     errorMessage.value = ''
-    successMessage.value = ''
 
     if (!checkoutForm.value?.checkValidity()) {
         checkoutForm.value?.reportValidity()
@@ -65,8 +88,9 @@ const placeOrder = async () => {
 
     try {
         await saveCheckoutAddress()
+        await prepareCheckoutSession()
         if (paymentMethod.value === 'bank') transferOpen.value = true
-        else completeOrder()
+        else await submitOrder()
     } catch (error) {
         errorMessage.value = 'Không thể lưu thông tin giao hàng. Vui lòng thử lại.'
         console.error(error)
@@ -82,7 +106,6 @@ const placeOrder = async () => {
                 <li class="active"><router-link to="/Thanhtoan">Thanh toán</router-link></li>
             </ul>
 
-            <div v-if="successMessage" class="alert alert-success">{{ successMessage }}</div>
             <div v-if="errorMessage" class="alert alert-danger">{{ errorMessage }}</div>
 
             <div v-if="thanhtoanStore.products.length === 0" class="empty-checkout">
@@ -138,6 +161,7 @@ const placeOrder = async () => {
                             :products="thanhtoanStore.products"
                             :promotion="thanhtoanStore.promotion"
                             :shipping-fee="shippingFee"
+                            :loading="isSubmitting"
                             @place-order="placeOrder"
                         />
                     </div>
@@ -148,8 +172,9 @@ const placeOrder = async () => {
         <Donhangchuyenkhoan
             :open="transferOpen"
             :total="grandTotal"
+            :loading="isSubmitting"
             @close="transferOpen = false"
-            @confirm="completeOrder"
+            @confirm="submitOrder"
         />
     </main>
 </template>

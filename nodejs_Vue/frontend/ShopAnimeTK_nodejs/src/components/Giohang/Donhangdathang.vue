@@ -8,6 +8,7 @@ const props = defineProps<{
     promotion: khuyenmai | null
     shippingFee: number
     modelValue: string
+    loading?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -65,7 +66,9 @@ const formatCurrency = (value: number) => new Intl.NumberFormat('vi-VN', {
             </label>
         </div>
 
-        <button type="button" class="btn btn-dark btn-place-order" @click="emit('placeOrder')">Đặt hàng</button>
+        <button type="button" class="btn btn-dark btn-place-order" :disabled="loading" @click="emit('placeOrder')">
+            {{ loading ? 'Đang xử lý...' : 'Đặt hàng' }}
+        </button>
     </div>
 </template>
 
