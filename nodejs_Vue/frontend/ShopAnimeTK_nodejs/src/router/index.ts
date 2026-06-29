@@ -10,6 +10,7 @@ import Dangnhap from '@/views/Dangnhap.vue'
 import Taikhoan from '@/views/Taikhoan.vue'
 import TaikhoanLayout from '@/layouts/TaikhoanLayout.vue'
 import Lichsudonhang from '@/views/Lichsudonhang.vue'
+import Giohang from '@/views/Giohang.vue'
 
 const routes = [
     {
@@ -39,6 +40,11 @@ const routes = [
                 path: 'chitiet/:slug',
                 name: 'chitiet',
                 component: DetailSanpham
+            },
+            {
+                path: 'Giohang',
+                name: 'Giohang',
+                component: Giohang
             }
         ],
     },
@@ -83,6 +89,11 @@ const routes = [
                 path: 'search',
                 name: 'searchHomeUser',
                 component: SearchSanpham
+            },
+                        {
+                path: 'Giohang',
+                name: 'GiohangHomeUser',
+                component: Giohang
             }
         ]
     }

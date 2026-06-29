@@ -164,6 +164,24 @@ app.get('/api/loadGiohang', (req, res) => {
     res.json(req.session.giohang)
 });
 
+// Lấy các khuyến mãi đang trong thời gian áp dụng.
+app.get('/api/loadKhuyenmai', async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT makm, tenkm, ngaybd, ngaykt, mucgiam, dieukien, giatri
+            FROM public.khuyenmai
+            WHERE ngaybd <= CURRENT_DATE
+              AND ngaykt >= CURRENT_DATE
+            ORDER BY mucgiam DESC
+        `)
+
+        res.json(result.rows)
+    } catch (error) {
+        console.error(error)
+        res.status(500).json({ error: 'Không thể tải danh sách khuyến mãi' })
+    }
+});
+
 app.post('/api/addGiohang', async (req, res) => {
     try {
         const {MaSp, Quanity} = req.body
