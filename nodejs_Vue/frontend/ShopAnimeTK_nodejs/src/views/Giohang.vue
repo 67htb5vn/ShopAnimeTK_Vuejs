@@ -246,6 +246,32 @@ td .form-check-input {
     background: #fff;
 }
 
+.table-cart .product-image-container,
+.table-cart .product-image {
+    width: 80px !important;
+    min-width: 80px !important;
+    max-width: 80px !important;
+    height: 80px !important;
+    margin: 0 auto !important;
+}
+
+.table-cart .product-image {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.table-cart .product-image img {
+    width: 80px !important;
+    min-width: 80px !important;
+    max-width: 80px !important;
+    height: 80px !important;
+    min-height: 80px !important;
+    max-height: 80px !important;
+    object-fit: contain !important;
+}
+
 .cart-empty {
     padding: 5rem 1rem;
     text-align: center;

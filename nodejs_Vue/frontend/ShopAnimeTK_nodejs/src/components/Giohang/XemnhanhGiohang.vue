@@ -1,13 +1,13 @@
 <script setup lang="ts">
-import { ref, onMounted, watch, computed } from 'vue';
+import { ref, onMounted, onBeforeUnmount, watch } from 'vue';
 import axios from 'axios';
-import { RouterLink, useRoute, useRouter } from 'vue-router';
-import type { sanpham } from '@/models/sanpham';
+import { useRoute } from 'vue-router';
 import type { sanphamgiohang } from '@/models/sanphamgiohang';
 import { useGiohangStore } from '@/stores/XemnhanhGiohang'
 import { normalizeProductImagePath, productPlaceholderImage, handleProductImageError } from '@/utils/productImage'
 
 const giohangStore = useGiohangStore()
+const route = useRoute()
 const isLoggedIn = ref(false)
 const Xoasp = ref<sanphamgiohang>()
 
@@ -40,6 +40,19 @@ const xoaSp = async (masp: string) => {
 
     await giohangStore.xoaGiohang(masp)
 }
+
+const closeQuickCart = () => {
+    document.body.classList.remove('cart-opened')
+    document.querySelectorAll('.cart-dropdown.show, .cart-dropdown .dropdown-menu.show').forEach(element => {
+        element.classList.remove('show')
+    })
+    document.querySelectorAll('.cart-dropdown .cart-toggle[aria-expanded="true"]').forEach(element => {
+        element.setAttribute('aria-expanded', 'false')
+    })
+}
+
+watch(() => route.fullPath, closeQuickCart)
+onBeforeUnmount(closeQuickCart)
 
 onMounted(() => {
     loadGiohang()

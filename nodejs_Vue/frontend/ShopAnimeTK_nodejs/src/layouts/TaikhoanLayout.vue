@@ -37,6 +37,8 @@
 import DanhmuchangMenu from '@/components/Danhmuchang/DanhmuchangMenu.vue';
 import HoathinhMenu from '@/components/Hoathinh/HoathinhMenu.vue';
 import HoathinhSearch from '@/components/Hoathinh/HoathinhSearch.vue';
+import XemnhanhGiohang from '@/components/Giohang/XemnhanhGiohang.vue';
+import { useGiohangStore } from '@/stores/XemnhanhGiohang';
 import { usePortoScripts } from '@/composable/usePortoScripts'
 
 const myShopScripts = [
@@ -59,6 +61,7 @@ const isLoggedIn = ref(false)
 const user = ref<nguoidung | null>(null)
 const router = useRouter()
 const route = useRoute()
+const giohangStore = useGiohangStore()
 const mahh = ref('')
 const search = ref('')
 
@@ -121,7 +124,7 @@ onMounted(async () => {
                                     <li><router-link to="/Taikhoan/Donhang">
                                             Lịch sử đơn hàng
                                         </router-link></li>
-                                    <li><router-link to="/Taikhoan">
+                                    <li><router-link to="/Giohang">
                                             Giỏ hàng
                                         </router-link></li>
                                 </ul>
@@ -186,7 +189,7 @@ onMounted(async () => {
                                     data-display="static">
                                     <i class="minicart-icon"></i>
                                     <span class="cart-count badge-circle">
-                                        @await Component.InvokeAsync("Soluong")
+                                        {{ giohangStore.tongSoLuong }}
                                     </span>
                                 </a>
 
@@ -198,14 +201,14 @@ onMounted(async () => {
                                     <div class="dropdownmenu-wrapper custom-scrollbar">
                                         <div class="dropdown-cart-header">Giỏ hàng</div>
                                         <!-- End .dropdown-cart-header -->
-                                        @await Component.InvokeAsync("Giohang")
+                                        <XemnhanhGiohang />
                                         <!-- End .dropdown-cart-total -->
 
 
                                         <div class="dropdown-cart-action">
-                                            <a :href="`/Giohang`" class="btn btn-dark btn-block">
+                                            <router-link to="/Giohang" class="btn btn-dark btn-block">
                                                 Thanh toán
-                                            </a>
+                                            </router-link>
                                         </div>
                                         <!-- End .dropdown-cart-total -->
                                     </div>

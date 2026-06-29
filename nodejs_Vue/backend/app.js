@@ -8,6 +8,7 @@ const { pool } = require("./pool");
 const multer = require('multer')
 const path = require('path')
 const crypto = require('crypto')
+const fs = require('fs')
 
 const { 
     getAllDanhmuchang, getAllHoathinh, getSanphamNoibat,  getAllSanphamDmh, getAllSanphamHh, getAllSanphamSearchHh,
@@ -21,6 +22,13 @@ const {
 
 const app = express();
 const PORT = 3000;
+
+function requireUser(req, res, next) {
+    if (!req.session.user) {
+        return res.status(401).json({ message: 'Vui lòng đăng nhập' })
+    }
+    next()
+}
 
 // 1. Cấu hình Middleware
 // app.use(cors()); // Cho phép các nguồn khác gọi API nếu cần
@@ -261,6 +269,13 @@ app.post('/api/addGiohang', async (req, res) => {
 });
 
 const uploadPath = path.join(__dirname, '..', 'frontend', 'ShopAnimeTK_nodejs', 'public', 'img', 'nd')
+fs.mkdirSync(uploadPath, { recursive: true })
+
+const avatarExtensions = {
+    'image/jpeg': '.jpg',
+    'image/png': '.png',
+    'image/webp': '.webp'
+}
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
         cb(null, uploadPath)
@@ -268,12 +283,21 @@ const storage = multer.diskStorage({
     filename: (req, file, cb) => {
 
         const mand = req.session.user.mand.trim()
-        const ext = path.extname(file.originalname)
+        const ext = avatarExtensions[file.mimetype]
 
         cb(null, `img_${mand}${ext}`)
     }
 })
-const upload = multer({ storage })
+const upload = multer({
+    storage,
+    limits: { fileSize: 5 * 1024 * 1024 },
+    fileFilter: (req, file, cb) => {
+        if (!avatarExtensions[file.mimetype]) {
+            return cb(new Error('Ảnh đại diện chỉ hỗ trợ JPG, PNG hoặc WEBP'))
+        }
+        cb(null, true)
+    }
+})
 
 // cập nhật số lượng
 app.put('/api/updateSoluong', (req, res) => {
@@ -311,7 +335,7 @@ app.delete('/api/deleteGiohang', (req, res) => {
     res.json(req.session.giohang)
 })
 
-app.post( '/api/upload-avatar', upload.single('avatar'), async (req, res) => {
+app.post('/api/upload-avatar', requireUser, upload.single('avatar'), async (req, res) => {
         try {
 
             if (!req.session.user) {
@@ -328,6 +352,7 @@ app.post( '/api/upload-avatar', upload.single('avatar'), async (req, res) => {
                 WHERE mand = $1
                 `, [mand]
             )
+            const oldFilename = check.rows[0]?.duongdan
 
             if (check.rows.length === 0) {
                 const countResult = await pool.query( 'SELECT COUNT(*) FROM hinhanhnd')
@@ -347,6 +372,15 @@ app.post( '/api/upload-avatar', upload.single('avatar'), async (req, res) => {
                     `,[ filename, mand]
                 )
             }
+
+            if (oldFilename && oldFilename !== filename) {
+                const safeOldFilename = path.basename(oldFilename)
+                await fs.promises.unlink(path.join(uploadPath, safeOldFilename)).catch((error) => {
+                    if (error.code !== 'ENOENT') console.error('Không thể xóa ảnh đại diện cũ:', error)
+                })
+            }
+
+            req.session.user.hinhanhnds = [{ mand, duongdan: filename }]
 
             res.json({
                 success: true,
@@ -521,13 +555,6 @@ app.get('/api/reviews/:masp', async (req, res) => {
         res.status(500).json({ message: 'Không thể tải đánh giá sản phẩm' })
     }
 });
-
-const requireUser = (req, res, next) => {
-    if (!req.session.user) {
-        return res.status(401).json({ message: 'Vui lòng đăng nhập' })
-    }
-    next()
-}
 
 app.get('/api/addresses', requireUser, async (req, res) => {
     try {

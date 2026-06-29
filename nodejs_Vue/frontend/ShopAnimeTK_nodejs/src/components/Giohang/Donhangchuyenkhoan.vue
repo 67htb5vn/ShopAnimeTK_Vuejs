@@ -40,5 +40,9 @@ const formatCurrency = (value: number) => new Intl.NumberFormat('vi-VN', {
 .transfer-backdrop { position: absolute; inset: 0; z-index: 0; background: rgb(0 0 0 / 55%); }
 .modal-dialog { position: relative; z-index: 1; width: min(560px, 100%); margin: 0; }
 .modal-header, .modal-footer { display: flex; align-items: center; justify-content: space-between; }
+.modal-header { min-height: 58px; padding: 1rem 1.5rem; }
+.modal-header .modal-title { margin: 0; font-size: 1.8rem; font-weight: 600; }
+.modal-header .btn { width: 34px; height: 34px; padding: 0; font-size: 1.8rem; line-height: 1; }
+.modal-body h4 { margin-top: 1.5rem; }
 .transfer-total { margin-top: 2rem; color: #222529; font-size: 1.8rem; }
 </style>

@@ -214,10 +214,10 @@ onMounted(loadAddresses)
 .address-dialog, .editor-dialog { position: relative; z-index: 1; width: min(1120px, 96vw); margin: 0; }
 .editor-dialog { width: min(1050px, 96vw); }
 .address-content, .editor-content { overflow: hidden; border: 1px solid #777; background: #fff; box-shadow: 0 12px 35px rgb(0 0 0 / 30%); }
-.address-header, .editor-header { display: flex; align-items: center; justify-content: space-between; min-height: 110px; padding: 2.5rem 4rem; background: #08c; color: #fff; }
+.address-header, .editor-header { display: flex; align-items: center; justify-content: space-between; min-height: 66px; padding: 1.2rem 2.4rem; background: #08c; color: #fff; }
 .editor-header { background: #20a4b8; }
-.address-header h3, .editor-header h3 { margin: 0; color: inherit; font-size: 2.7rem; font-weight: 500; }
-.modal-close { width: 45px; height: 45px; border: 0; background: #fff; color: #333; font-size: 2rem; cursor: pointer; }
+.address-header h3, .editor-header h3 { margin: 0; color: inherit; font-size: 2rem; font-weight: 600; }
+.modal-close { width: 36px; height: 36px; border: 0; background: #fff; color: #333; font-size: 1.7rem; line-height: 1; cursor: pointer; }
 .address-body { padding: 3rem 4rem 0; }
 .address-alert { margin-bottom: 2.5rem; padding: 2rem; background: #d7f1f7; color: #2f6473; font-size: 1.6rem; }
 .address-error { margin-bottom: 1rem; color: #dc3545; }
