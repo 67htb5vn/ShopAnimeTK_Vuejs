@@ -29,6 +29,11 @@ const getAllHoathinh = async () => {
     return result.rows;
 };
 
+const getAllKhuyenmai = async () => {
+    const result = await pool.query('SELECT * FROM public.khuyenmai');
+    return result.rows;
+};
+
 const getSanphamNoibat = async () => {
     const result = await pool.query(`
         SELECT DISTINCT ON (sp.madmh) 
@@ -299,4 +304,5 @@ const getStudentsByID = async ({ id }) => {
 }
 
 module.exports = { getAllDanhmuchang, getAllHoathinh, getSanphamNoibat, getAllSanphamDmh, getAllSanphamHh, getAllSanphamSearchHh, 
-                    getAllSanphamChitiet, getDangnhap, getPagination, updateStudents, insertStudents, deleteStudents, getStudentsByID }
+                    getAllSanphamChitiet, getDangnhap, getPagination, updateStudents, insertStudents, deleteStudents, getStudentsByID,
+                    getAllKhuyenmai }

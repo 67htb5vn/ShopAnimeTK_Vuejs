@@ -11,6 +11,7 @@ import Taikhoan from '@/views/Taikhoan.vue'
 import TaikhoanLayout from '@/layouts/TaikhoanLayout.vue'
 import Lichsudonhang from '@/views/Lichsudonhang.vue'
 import Giohang from '@/views/Giohang.vue'
+import Thanhtoan from '@/views/Thanhtoan.vue'
 
 const routes = [
     {
@@ -45,6 +46,11 @@ const routes = [
                 path: 'Giohang',
                 name: 'Giohang',
                 component: Giohang
+            },
+            {
+                path: 'Thanhtoan',
+                name: 'Thanhtoan',
+                component: Thanhtoan
             }
         ],
     },
@@ -94,6 +100,11 @@ const routes = [
                 path: 'Giohang',
                 name: 'GiohangHomeUser',
                 component: Giohang
+            },
+            {
+                path: 'Thanhtoan',
+                name: 'ThanhtoanHomeUser',
+                component: Thanhtoan
             }
         ]
     }
@@ -105,4 +116,3 @@ const router = createRouter({
 })
 
 export default router
-

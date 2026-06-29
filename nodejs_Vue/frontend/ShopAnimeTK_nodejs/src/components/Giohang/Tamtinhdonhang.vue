@@ -9,6 +9,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
     xoaKhuyenMai: []
+    thanhToan: []
 }>()
 
 const tienGiam = computed(() => {
@@ -43,18 +44,16 @@ const formatCurrency = (value: number) =>
                                 <strong>{{ khuyenMai.makm }}</strong>
                                 <span>{{ khuyenMai.tenkm }}</span>
                             </div>
-                            <button
-                                type="button"
-                                class="btn-remove-promotion"
-                                title="Hủy khuyến mãi"
-                                @click="emit('xoaKhuyenMai')"
-                            >×</button>
+                            <button type="button" class="btn-remove-promotion" title="Hủy khuyến mãi"
+                                @click="emit('xoaKhuyenMai')">×</button>
                         </div>
                         <span v-else class="text-muted">Chưa áp dụng voucher</span>
                     </td>
                 </tr>
                 <tr>
-                    <td><h4>Tiền giảm</h4></td>
+                    <td>
+                        <h4>Tiền giảm</h4>
+                    </td>
                     <td class="discount">-{{ formatCurrency(tienGiam) }}</td>
                 </tr>
             </tbody>
@@ -67,7 +66,7 @@ const formatCurrency = (value: number) =>
         </table>
 
         <div class="checkout-methods">
-            <button type="button" class="btn btn-block btn-dark" :disabled="tamTinh <= 0">
+            <button type="button" class="btn btn-block btn-dark" :disabled="tamTinh <= 0" @click="emit('thanhToan')">
                 Thanh toán
                 <i class="fa fa-arrow-right"></i>
             </button>

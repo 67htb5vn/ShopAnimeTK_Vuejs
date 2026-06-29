@@ -10,8 +10,8 @@ const path = require('path')
 const crypto = require('crypto')
 
 const { 
-    getAllDanhmuchang, getAllHoathinh, getSanphamNoibat, getAllSanphamDmh, getAllSanphamHh, getAllSanphamSearchHh,
-    getAllSanphamChitiet, getDangnhap,
+    getAllDanhmuchang, getAllHoathinh, getSanphamNoibat,  getAllSanphamDmh, getAllSanphamHh, getAllSanphamSearchHh,
+    getAllSanphamChitiet, getDangnhap, getAllKhuyenmai,
     insertStudents, 
     getStudentsByID, 
     getPagination, 
@@ -167,6 +167,17 @@ app.get('/api/loadGiohang', (req, res) => {
 // Lấy các khuyến mãi đang trong thời gian áp dụng.
 app.get('/api/loadKhuyenmai', async (req, res) => {
     try {
+        const khuyenmais = await getAllKhuyenmai();
+
+        res.json(khuyenmais)
+    } catch (error) {
+        console.error(error)
+        res.status(500).json({ error: 'Không thể tải danh sách khuyến mãi' })
+    }
+});
+
+app.get('/api/loadKhuyenmaithoaman', async (req, res) => {
+    try {
         const result = await pool.query(`
             SELECT makm, tenkm, ngaybd, ngaykt, mucgiam, dieukien, giatri
             FROM public.khuyenmai
@@ -181,6 +192,8 @@ app.get('/api/loadKhuyenmai', async (req, res) => {
         res.status(500).json({ error: 'Không thể tải danh sách khuyến mãi' })
     }
 });
+
+
 
 app.post('/api/addGiohang', async (req, res) => {
     try {
@@ -478,6 +491,97 @@ app.get('/api/checkauth', (req, res) => {
         loggedIn: false
     });
 });
+
+const requireUser = (req, res, next) => {
+    if (!req.session.user) {
+        return res.status(401).json({ message: 'Vui lòng đăng nhập' })
+    }
+    next()
+}
+
+app.get('/api/addresses', requireUser, async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT madc, ten, sodienthoai, tinh_tp, diachinha
+            FROM public.diachi
+            WHERE mand = $1
+            ORDER BY madc DESC
+        `, [req.session.user.mand.trim()])
+
+        res.json({ addresses: result.rows, selected: req.session.checkoutAddress || null })
+    } catch (error) {
+        console.error(error)
+        res.status(500).json({ message: 'Không thể tải địa chỉ' })
+    }
+})
+
+app.post('/api/addresses', requireUser, async (req, res) => {
+    try {
+        const { ten, sodienthoai, tinh_tp, diachinha } = req.body
+        if (!ten || !/^0\d{9}$/.test(sodienthoai || '') || !tinh_tp || !diachinha) {
+            return res.status(400).json({ message: 'Thông tin địa chỉ không hợp lệ' })
+        }
+
+        const result = await pool.query(`
+            INSERT INTO public.diachi (mand, ten, sodienthoai, tinh_tp, diachinha)
+            VALUES ($1, $2, $3, $4, $5)
+            RETURNING madc, ten, sodienthoai, tinh_tp, diachinha
+        `, [req.session.user.mand.trim(), ten.trim(), sodienthoai, tinh_tp, diachinha.trim()])
+
+        res.status(201).json(result.rows[0])
+    } catch (error) {
+        console.error(error)
+        res.status(500).json({ message: 'Không thể lưu địa chỉ' })
+    }
+})
+
+app.put('/api/addresses/:id', requireUser, async (req, res) => {
+    try {
+        const { ten, sodienthoai, tinh_tp, diachinha } = req.body
+        if (!ten || !/^0\d{9}$/.test(sodienthoai || '') || !tinh_tp || !diachinha) {
+            return res.status(400).json({ message: 'Thông tin địa chỉ không hợp lệ' })
+        }
+
+        const result = await pool.query(`
+            UPDATE public.diachi
+            SET ten = $1, sodienthoai = $2, tinh_tp = $3, diachinha = $4
+            WHERE madc = $5 AND mand = $6
+            RETURNING madc, ten, sodienthoai, tinh_tp, diachinha
+        `, [ten.trim(), sodienthoai, tinh_tp, diachinha.trim(), req.params.id, req.session.user.mand.trim()])
+
+        if (!result.rows[0]) return res.status(404).json({ message: 'Không tìm thấy địa chỉ' })
+        res.json(result.rows[0])
+    } catch (error) {
+        console.error(error)
+        res.status(500).json({ message: 'Không thể cập nhật địa chỉ' })
+    }
+})
+
+app.delete('/api/addresses/:id', requireUser, async (req, res) => {
+    try {
+        await pool.query(
+            'DELETE FROM public.diachi WHERE madc = $1 AND mand = $2',
+            [req.params.id, req.session.user.mand.trim()]
+        )
+        res.json({ success: true })
+    } catch (error) {
+        console.error(error)
+        res.status(500).json({ message: 'Không thể xóa địa chỉ' })
+    }
+})
+
+app.post('/api/checkout-address', requireUser, (req, res) => {
+    const { ten, sodienthoai, tinh_tp, diachinha } = req.body
+    if (!ten || !/^0\d{9}$/.test(sodienthoai || '') || !tinh_tp || !diachinha) {
+        return res.status(400).json({ message: 'Thông tin địa chỉ không hợp lệ' })
+    }
+
+    req.session.checkoutAddress = { ten, sodienthoai, tinh_tp, diachinha }
+    req.session.save((error) => {
+        if (error) return res.status(500).json({ message: 'Không thể lưu địa chỉ vào session' })
+        res.json(req.session.checkoutAddress)
+    })
+})
 
 app.post('/api/logout', (req, res) => {
     req.session.destroy(() => {

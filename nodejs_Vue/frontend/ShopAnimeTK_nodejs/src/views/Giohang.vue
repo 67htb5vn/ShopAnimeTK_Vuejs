@@ -1,12 +1,16 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import type { sanphamgiohang } from '@/models/sanphamgiohang'
 import type { khuyenmai } from '@/models/khuyenmai'
 import { useGiohangStore } from '@/stores/XemnhanhGiohang'
 import Tamtinhdonhang from '@/components/Giohang/Tamtinhdonhang.vue'
 import Khuyenmai from '@/components/Khuyenmai/Khuyenmai.vue'
+import { useThanhtoanStore } from '@/stores/Thanhtoan'
 
 const giohangStore = useGiohangStore()
+const thanhtoanStore = useThanhtoanStore()
+const router = useRouter()
 const isLoading = ref(true)
 const errorMessage = ref('')
 const updatingProducts = ref<string[]>([])
@@ -86,6 +90,12 @@ const removeProduct = async (item: sanphamgiohang) => {
     } finally {
         setUpdating(item.masp, false)
     }
+}
+
+const proceedToCheckout = () => {
+    if (selectedProducts.value.length === 0) return
+    thanhtoanStore.startCheckout(selectedProducts.value, selectedPromotion.value)
+    router.push('/Thanhtoan')
 }
 
 watch(orderTotal, (total) => {
@@ -189,7 +199,8 @@ onMounted(async () => {
 
                 <div class="col-lg-4">
                     <Tamtinhdonhang :tam-tinh="orderTotal" :khuyen-mai="selectedPromotion"
-                        @xoa-khuyen-mai="selectedPromotion = null" />
+                        @xoa-khuyen-mai="selectedPromotion = null"
+                        @thanh-toan="proceedToCheckout" />
                     <Khuyenmai v-model="selectedPromotion" :tam-tinh="orderTotal" />
                 </div>
             </div>
