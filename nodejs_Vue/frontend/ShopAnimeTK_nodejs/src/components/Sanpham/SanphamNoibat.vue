@@ -96,12 +96,8 @@ onMounted(loadSanphamNoibat)
             <figure class="featured-product-figure">
                 <router-link :to="productLink(sp)" :title="sp.tensp" class="my-product-image">
                     <img :src="getProductImages(sp).main" :alt="sp.tensp || 'Sản phẩm'" @error="handleImageError">
-                    <img
-                        :src="getProductImages(sp).hover"
-                        :alt="`${sp.tensp || 'Sản phẩm'} - ảnh phụ`"
-                        class="hover-image"
-                        @error="handleImageError"
-                    >
+                    <img :src="getProductImages(sp).hover" :alt="`${sp.tensp || 'Sản phẩm'} - ảnh phụ`"
+                        class="hover-image" @error="handleImageError">
                 </router-link>
 
                 <div class="label-group">
@@ -112,10 +108,7 @@ onMounted(loadSanphamNoibat)
             <div class="product-details">
                 <div class="category-wrap">
                     <div class="category-list">
-                        <router-link
-                            :to="`/Danhmuchang?MaDmh=${cleanCode(sp.madmh)}`"
-                            class="product-category"
-                        >
+                        <router-link :to="`/Danhmuchang?MaDmh=${cleanCode(sp.madmh)}`" class="product-category">
                             {{ sp.tendmh || cleanCode(sp.madmh) }}
                         </router-link>
                     </div>
@@ -132,8 +125,6 @@ onMounted(loadSanphamNoibat)
                             <span class="tooltiptext tooltip-top"></span>
                         </div>
                     </div>
-                    <span class="rating-value">{{ ratingText(sp) }}/5</span>
-                    <span class="rating-count">({{ sp.sodanhgia || 0 }} đánh giá)</span>
                 </div>
 
                 <div class="price-box">
