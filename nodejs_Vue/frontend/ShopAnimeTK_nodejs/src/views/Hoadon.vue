@@ -92,7 +92,7 @@ onMounted(loadOrders)
 
         <div v-if="errorMessage" class="alert alert-danger">{{ errorMessage }}</div>
         <TableHoadon :orders="orders" :loading="loading" :page="page" :total-pages="totalPages"
-            @page-change="changePage" @cancel="cancelOrder" />
+            @page-change="changePage" />
     </section>
 </template>
 

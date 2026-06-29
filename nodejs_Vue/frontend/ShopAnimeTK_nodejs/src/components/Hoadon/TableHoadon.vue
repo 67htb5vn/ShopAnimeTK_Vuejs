@@ -28,7 +28,6 @@ const props = defineProps<{
 
 const emit = defineEmits<{
     pageChange: [page: number]
-    cancel: [order: OrderSummary]
 }>()
 
 const pages = computed(() => {
@@ -99,21 +98,20 @@ const badgeClass = (status: string) => ({
                         <td>
                             <div class="order-actions">
                                 <router-link
-                                    :to="`/Dathangthanhcong/${order.mahd}`"
+                                    :to="`/Taikhoan/Donhang/${order.mahd}`"
                                     class="action-button view-button"
                                     title="Xem chi tiết"
                                 >
                                     <i class="fas fa-eye"></i>
                                 </router-link>
-                                <button
+                                <router-link
                                     v-if="order.matt === 'TT001'"
-                                    type="button"
+                                    :to="`/Taikhoan/Donhang/${order.mahd}/Huy`"
                                     class="action-button cancel-button"
                                     title="Hủy đơn hàng"
-                                    @click="emit('cancel', order)"
                                 >
                                     <i class="fas fa-window-close"></i>
-                                </button>
+                                </router-link>
                             </div>
                         </td>
                     </tr>

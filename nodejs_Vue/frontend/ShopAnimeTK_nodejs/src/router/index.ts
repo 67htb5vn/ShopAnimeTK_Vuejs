@@ -10,6 +10,8 @@ import Dangnhap from '@/views/Dangnhap.vue'
 import Taikhoan from '@/views/Taikhoan.vue'
 import TaikhoanLayout from '@/layouts/TaikhoanLayout.vue'
 import Hoadon from '@/views/Hoadon.vue'
+import Chitiethoadon from '@/components/Hoadon/Chitiethoadon.vue'
+import Huydonhang from '@/components/Hoadon/Huydonhang.vue'
 import Giohang from '@/views/Giohang.vue'
 import Thanhtoan from '@/views/Thanhtoan.vue'
 import Dathangthanhcong from '@/views/Dathangthanhcong.vue'
@@ -77,6 +79,16 @@ const routes = [
                 path: 'Donhang',
                 name: 'Hoadon',
                 component: Hoadon
+            },
+            {
+                path: 'Donhang/:mahd/Huy',
+                name: 'HoadonCancel',
+                component: Huydonhang
+            },
+            {
+                path: 'Donhang/:mahd',
+                name: 'HoadonDetail',
+                component: Chitiethoadon
             }
         ]
     },

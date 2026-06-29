@@ -206,6 +206,10 @@ app.get('/api/loadKhuyenmaithoaman', async (req, res) => {
 app.post('/api/addGiohang', async (req, res) => {
     try {
         const {MaSp, Quanity} = req.body
+        const requestedQuantity = Number(Quanity)
+        if (!MaSp || !Number.isInteger(requestedQuantity) || requestedQuantity < 1) {
+            return res.status(400).json({ message: 'Số lượng sản phẩm không hợp lệ' })
+        }
         const result = await getAllSanphamChitiet({
             masp: MaSp
         });
@@ -225,9 +229,16 @@ app.post('/api/addGiohang', async (req, res) => {
             (item) => item.masp.trim() === MaSp.trim()
         )
 
+        const quantityInCart = index !== -1 ? Number(req.session.giohang[index].soluong || 0) : 0
+        if (quantityInCart + requestedQuantity > Number(sp.soluong || 0)) {
+            return res.status(409).json({
+                message: 'Thêm quá số lượng trong kho. Vui lòng giảm xuống.'
+            })
+        }
+
         if (index !== -1) {
             // Đã có -> cộng thêm số lượng
-            req.session.giohang[index].soluong += Number(Quanity)
+            req.session.giohang[index].soluong += requestedQuantity
 
             req.session.giohang[index].thanhtien =
                 req.session.giohang[index].soluong *
@@ -238,8 +249,8 @@ app.post('/api/addGiohang', async (req, res) => {
                 tensp: sp.tensp,
                 gia: sp.gia,
                 ghichu: sp.ghichu,
-                soluong: Number(Quanity),
-                thanhtien: sp.gia * Number(Quanity),
+                soluong: requestedQuantity,
+                thanhtien: sp.gia * requestedQuantity,
                 chon: true,
                 mahh: sp.mahh,
                 madmh: sp.madmh,
@@ -300,22 +311,36 @@ const upload = multer({
 })
 
 // cập nhật số lượng
-app.put('/api/updateSoluong', (req, res) => {
+app.put('/api/updateSoluong', async (req, res) => {
+    try {
+        const { masp } = req.body
+        const requestedQuantity = Number(req.body.soluong)
+        if (!masp || !Number.isInteger(requestedQuantity) || requestedQuantity < 1) {
+            return res.status(400).json({ message: 'Số lượng sản phẩm không hợp lệ' })
+        }
 
-    const { masp, soluong } = req.body
-
-    const sp =
-        req.session.giohang.find(
-            x => x.masp.trim() === masp.trim()
+        const result = await pool.query(
+            'SELECT soluong FROM public.sanpham WHERE TRIM(masp) = $1 LIMIT 1',
+            [String(masp).trim()]
         )
+        if (!result.rows[0]) return res.status(404).json({ message: 'Không tìm thấy sản phẩm' })
+        if (requestedQuantity > Number(result.rows[0].soluong || 0)) {
+            return res.status(409).json({
+                message: 'Thêm quá số lượng trong kho. Vui lòng giảm xuống.'
+            })
+        }
 
-    if (sp) {
-
-        sp.soluong = soluong
-        sp.thanhtien = sp.gia * soluong
+        const cart = req.session.giohang || []
+        const product = cart.find(item => item.masp.trim() === String(masp).trim())
+        if (product) {
+            product.soluong = requestedQuantity
+            product.thanhtien = product.gia * requestedQuantity
+        }
+        res.json(cart)
+    } catch (error) {
+        console.error(error)
+        res.status(500).json({ message: 'Không thể cập nhật số lượng' })
     }
-
-    res.json(req.session.giohang)
 })
 
 // xóa sản phẩm khỏi giỏ
@@ -674,10 +699,19 @@ app.post('/api/checkout-session', requireUser, async (req, res) => {
         }
 
         const productResult = await pool.query(`
-            SELECT TRIM(masp) AS masp, gia
+            SELECT TRIM(masp) AS masp, gia, soluong
             FROM public.sanpham
             WHERE TRIM(masp) = ANY($1::text[])
         `, [selectedProducts.map(item => item.masp)])
+        const productsById = new Map(productResult.rows.map(item => [item.masp, item]))
+        const exceedsStock = selectedProducts.some(item =>
+            item.soluong > Number(productsById.get(item.masp)?.soluong || 0)
+        )
+        if (exceedsStock) {
+            return res.status(409).json({
+                message: 'Thêm quá số lượng trong kho. Vui lòng giảm xuống.'
+            })
+        }
         const prices = new Map(productResult.rows.map(item => [item.masp, Number(item.gia)]))
         const subtotal = selectedProducts.reduce(
             (total, item) => total + Number(prices.get(item.masp) || 0) * item.soluong,
@@ -741,7 +775,7 @@ app.post('/api/orders', requireUser, async (req, res) => {
         const mahd = `HD${String(idResult.rows[0].next_id).padStart(3, '0')}`
 
         const productResult = await client.query(`
-            SELECT TRIM(masp) AS masp, tensp, gia
+            SELECT TRIM(masp) AS masp, tensp, gia, soluong
             FROM public.sanpham
             WHERE TRIM(masp) = ANY($1::text[])
             FOR UPDATE
@@ -754,6 +788,11 @@ app.post('/api/orders', requireUser, async (req, res) => {
 
         const details = selectedProducts.map(item => {
             const product = productMap.get(item.masp)
+            if (Number(item.soluong) > Number(product.soluong || 0)) {
+                const stockError = new Error('Thêm quá số lượng trong kho. Vui lòng giảm xuống.')
+                stockError.statusCode = 409
+                throw stockError
+            }
             return {
                 masp: item.masp,
                 tensp: product.tensp,
@@ -792,6 +831,17 @@ app.post('/api/orders', requireUser, async (req, res) => {
                 INSERT INTO public.cthoadon (masp, mahd, gia, soluong)
                 VALUES ($1, $2, $3, $4)
             `, [detail.masp, mahd, detail.gia, detail.soluong])
+
+            const stockResult = await client.query(`
+                UPDATE public.sanpham
+                SET soluong = soluong - $2
+                WHERE TRIM(masp) = $1 AND soluong >= $2
+            `, [detail.masp, detail.soluong])
+            if (stockResult.rowCount !== 1) {
+                const stockError = new Error('Thêm quá số lượng trong kho. Vui lòng giảm xuống.')
+                stockError.statusCode = 409
+                throw stockError
+            }
         }
 
         await client.query(`
@@ -819,6 +869,9 @@ app.post('/api/orders', requireUser, async (req, res) => {
         res.status(201).json({ mahd })
     } catch (error) {
         await client.query('ROLLBACK')
+        if (error.statusCode) {
+            return res.status(error.statusCode).json({ message: error.message })
+        }
         console.error(error)
         res.status(500).json({ message: error.message || 'Không thể tạo đơn hàng' })
     } finally {
@@ -931,6 +984,18 @@ app.patch('/api/orders/:mahd/cancel', requireUser, async (req, res) => {
         }
 
         await client.query(`
+            UPDATE public.sanpham sp
+            SET soluong = COALESCE(sp.soluong, 0) + details.total_quantity
+            FROM (
+                SELECT TRIM(masp) AS masp, SUM(soluong)::integer AS total_quantity
+                FROM public.cthoadon
+                WHERE TRIM(mahd) = $1
+                GROUP BY TRIM(masp)
+            ) details
+            WHERE TRIM(sp.masp) = details.masp
+        `, [order.mahd])
+
+        await client.query(`
             INSERT INTO public.cttrangthai (mahd, matt, ngaycapnhat)
             VALUES ($1, 'TT005', CURRENT_TIMESTAMP)
         `, [order.mahd])
@@ -980,7 +1045,24 @@ app.get('/api/orders/:mahd', requireUser, async (req, res) => {
         const addressParts = String(order.diachi || '').split('_')
         const shippingFee = isHanoiAddress(addressParts[2] || '') ? 0 : 25_000
 
-        res.json({ ...order, details: detailResult.rows, promotion, subtotal, discount, shippingFee })
+        const statusResult = await pool.query(`
+            SELECT TRIM(ct.mahd) AS mahd, TRIM(ct.matt) AS matt,
+                   ct.ngaycapnhat, tt.tentrangthai
+            FROM public.cttrangthai ct
+            LEFT JOIN public.trangthai tt ON TRIM(tt.matt) = TRIM(ct.matt)
+            WHERE TRIM(ct.mahd) = $1
+            ORDER BY ct.ngaycapnhat DESC NULLS LAST
+        `, [order.mahd])
+
+        res.json({
+            ...order,
+            details: detailResult.rows,
+            statuses: statusResult.rows,
+            promotion,
+            subtotal,
+            discount,
+            shippingFee
+        })
     } catch (error) {
         console.error(error)
         res.status(500).json({ message: 'Không thể tải đơn hàng' })

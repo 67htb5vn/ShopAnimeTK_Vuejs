@@ -257,11 +257,15 @@ const decreaseQty = () => {
 }
 
 const checkOverload = () => {
-    if (quantity.value > (sp.value?.soluong || 0)) {
-        isOverload.value = true
-    } else {
-        isOverload.value = false
-    }
+    const stock = Number(sp.value?.soluong || 0)
+    const remaining = masp ? giohangStore.getConlai(stock, masp) : stock
+    isOverload.value = quantity.value > remaining
+}
+
+const showCartMessage = () => {
+    const cartMessage = document.querySelector('.cart-message')
+    cartMessage?.classList.remove('invisible')
+    setTimeout(() => cartMessage?.classList.add('invisible'), 3000)
 }
 
 const loadSanphamChitiet = async () => {
@@ -271,6 +275,7 @@ const loadSanphamChitiet = async () => {
         })
 
         isLoggedIn.value = res.data.loggedIn
+        if (isLoggedIn.value) await giohangStore.loadGiohang()
 
         const response = await axios.get('/api/loadSanphamChitiet', {
             params: {
@@ -289,7 +294,7 @@ const loadSanphamChitiet = async () => {
     }
 };
 
-const addGiohang = async () => {
+const addGiohangLegacy = async () => {
     try {
         checkOverload();
         if (isOverload.value == false) {
@@ -323,6 +328,39 @@ const addGiohang = async () => {
         }, 3000)
 
     } catch (error) {
+        console.error(error)
+    }
+}
+
+const addGiohang = async () => {
+    checkOverload()
+    if (isOverload.value) {
+        showCartMessage()
+        return
+    }
+
+    try {
+        await axios.post('/api/addGiohang', {
+            MaSp: masp,
+            Quanity: quantity.value
+        }, { withCredentials: true })
+
+        giohangStore.addLocal({
+            masp: sp.value?.masp,
+            tensp: sp.value?.tensp,
+            gia: sp.value?.gia,
+            soluong: quantity.value,
+            thanhtien: (sp.value?.gia || 0) * quantity.value,
+            duongdan: getAnhByLoai(sp.value!, 1)
+        })
+        isOverload.value = false
+        showCartMessage()
+    } catch (error: any) {
+        if (error.response?.status === 409) {
+            isOverload.value = true
+            showCartMessage()
+            return
+        }
         console.error(error)
     }
 }

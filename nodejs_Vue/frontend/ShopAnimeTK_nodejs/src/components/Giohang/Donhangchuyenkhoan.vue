@@ -8,17 +8,18 @@ const formatCurrency = (value: number) => new Intl.NumberFormat('vi-VN', {
 
 <template>
     <Teleport to="body">
-        <div v-if="open" class="transfer-modal" role="dialog" aria-modal="true">
+        <div v-if="open" class="transfer-modal" role="dialog" aria-modal="true" aria-labelledby="bank-transfer-title">
             <div class="transfer-backdrop" @click="emit('close')"></div>
             <div class="modal-dialog">
                 <div class="modal-content">
                     <div class="modal-header bg-primary">
-                        <h4 class="modal-title text-white">Chuyển khoản ngân hàng</h4>
-                        <button type="button" class="btn btn-light btn-sm" @click="emit('close')">×</button>
+                        <h4 id="bank-transfer-title" class="modal-title text-white">Chuyển khoản ngân hàng</h4>
+                        <button type="button" class="btn btn-light btn-sm" aria-label="Đóng" @click="emit('close')">×</button>
                     </div>
                     <div class="modal-body text-center">
                         <div class="alert alert-warning">Sau khi chuyển khoản, vui lòng bấm xác nhận để hoàn tất.</div>
                         <h4>NGÂN HÀNG QUÂN ĐỘI – MBBank</h4>
+                        <img class="bank-qr" src="/images/chuyenkhoan.jpg" alt="Mã QR chuyển khoản ngân hàng MBBank">
                         <p>Số tài khoản: <strong>0123456789</strong></p>
                         <p>Nội dung: <strong>SHOPANIME + SỐ ĐIỆN THOẠI</strong></p>
                         <p class="transfer-total">Số tiền: <strong>{{ formatCurrency(total) }}</strong></p>
@@ -44,5 +45,6 @@ const formatCurrency = (value: number) => new Intl.NumberFormat('vi-VN', {
 .modal-header .modal-title { margin: 0; font-size: 1.8rem; font-weight: 600; }
 .modal-header .btn { width: 34px; height: 34px; padding: 0; font-size: 1.8rem; line-height: 1; }
 .modal-body h4 { margin-top: 1.5rem; }
+.bank-qr { display: block; width: min(230px, 70vw); max-height: 260px; margin: 1.5rem auto; object-fit: contain; }
 .transfer-total { margin-top: 2rem; color: #222529; font-size: 1.8rem; }
 </style>

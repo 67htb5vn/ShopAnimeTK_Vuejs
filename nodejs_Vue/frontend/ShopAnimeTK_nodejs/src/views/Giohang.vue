@@ -14,6 +14,7 @@ const thanhtoanStore = useThanhtoanStore()
 const router = useRouter()
 const isLoading = ref(true)
 const errorMessage = ref('')
+const stockMessageVisible = ref(false)
 const updatingProducts = ref<string[]>([])
 const selectedPromotion = ref<khuyenmai | null>(null)
 
@@ -45,6 +46,13 @@ const setUpdating = (masp: string, value: boolean) => {
         : updatingProducts.value.filter((id) => id !== masp)
 }
 
+const showStockMessage = () => {
+    stockMessageVisible.value = true
+    window.setTimeout(() => {
+        stockMessageVisible.value = false
+    }, 3000)
+}
+
 const saveQuantity = async (item: sanphamgiohang, quantity: number) => {
     if (!item.masp) return
 
@@ -65,6 +73,10 @@ const saveQuantity = async (item: sanphamgiohang, quantity: number) => {
         item.thanhtien = Number(item.gia ?? 0) * previousQuantity
         errorMessage.value = 'Không thể cập nhật số lượng. Vui lòng thử lại.'
         console.error(error)
+        if ((error as any).response?.status === 409) {
+            errorMessage.value = ''
+            showStockMessage()
+        }
     } finally {
         setUpdating(item.masp, false)
     }
@@ -128,6 +140,13 @@ onMounted(async () => {
                 </li>
                 <li><span>Thanh toán</span></li>
             </ul>
+
+            <div v-if="stockMessageVisible" class="cart-message stock-cart-message" role="alert">
+                <div class="cart-message-content error">
+                    <i class="icon-cancel"></i>
+                    <strong>Thêm quá số lượng trong kho. Vui lòng giảm xuống.</strong>
+                </div>
+            </div>
 
             <p v-if="errorMessage" class="cart-error" role="alert">{{ errorMessage }}</p>
             <div v-if="isLoading" class="cart-empty">Đang tải giỏ hàng...</div>
@@ -279,6 +298,30 @@ td .form-check-input {
 
 .cart-error {
     margin-bottom: 1.5rem;
+    color: #dc3545;
+}
+
+.stock-cart-message {
+    display: flex;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding: 1.2rem 1.5rem;
+    border-left: 4px solid #dc3545;
+    background: #fff1f1;
+    color: #721c24;
+}
+
+.stock-cart-message::before {
+    display: none !important;
+}
+
+.stock-cart-message .cart-message-content {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.stock-cart-message .cart-message-content.error i {
     color: #dc3545;
 }
 

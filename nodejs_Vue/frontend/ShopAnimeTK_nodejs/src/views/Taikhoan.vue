@@ -174,5 +174,7 @@ onBeforeUnmount(() => {
 .avatar-image { width: 120px; height: 120px; border: 2px solid #333; border-radius: 50%; object-fit: cover; cursor: pointer; background: #f3f3f3; }
 .avatar-overlay { position: absolute; bottom: -5px; left: 50%; min-width: 105px; padding: 5px 10px; transform: translateX(-50%); border: 0; border-radius: 14px; background: rgb(0 0 0 / 65%); color: #fff; font-size: 12px; cursor: pointer; }
 .avatar-overlay:disabled { cursor: wait; opacity: .8; }
-.password-toggle { margin-bottom: 1.5rem; padding: 0; border: 0; background: transparent; color: #08c; cursor: pointer; }
+.password-toggle { display: block; width: max-content; margin-bottom: 1.5rem; padding: 0; border: 0; background: transparent; color: #08c; cursor: pointer; }
+.password-toggle + div { width: 100%; }
+form > .btn[type="submit"] { display: block; margin-top: 1rem; }
 </style>

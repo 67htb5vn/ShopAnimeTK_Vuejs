@@ -302,7 +302,7 @@ onMounted(async () => {
                             </li>
 
                             <li class="nav-item">
-                                <router-link to="/Taikhoan/Donhang" class="nav-link" :class="{ 'account-active': route.name === 'Hoadon' }" id="order-tab" aria-controls="order"
+                                <router-link to="/Taikhoan/Donhang" class="nav-link" :class="{ 'account-active': String(route.name || '').startsWith('Hoadon') }" id="order-tab" aria-controls="order"
                                     aria-selected="true" style="text-transform:none;">
                                     Đơn hàng của tôi
                                 </router-link>
