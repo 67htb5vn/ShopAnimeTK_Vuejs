@@ -25,7 +25,7 @@ pub fn routes() -> Router<AppState> {
 async fn list(State(state): State<AppState>, Query(query): Query<UserListQuery>) -> ApiResult<Json<PageResponse<UserRow>>> {
     let page = query.page.unwrap_or(1).max(1); let page_size = query.page_size.unwrap_or(10).clamp(5,100);
     let q = query.q.unwrap_or_default(); let role = query.role.unwrap_or_default(); let active = query.active.unwrap_or_default();
-    let conditions = "WHERE ($1='' OR mand ILIKE '%'||$1||'%' OR ten ILIKE '%'||$1||'%' OR taikhoan ILIKE '%'||$1||'%' OR email ILIKE '%'||$1||'%') AND ($2='' OR phanquyen::text=$2) AND ($3='' OR trangthai::text=$3)";
+    let conditions = "WHERE ($1='' OR mand ILIKE '%'||$1||'%' OR ten ILIKE '%'||$1||'%' OR taikhoan ILIKE '%'||$1||'%' OR email ILIKE '%'||$1||'%') AND ($2='' OR phanquyen = CASE WHEN $2='1' THEN B'1' ELSE B'0' END) AND ($3='' OR ($3='1' AND trangthai = B'1') OR ($3='0' AND COALESCE(trangthai, B'0') = B'0'))";
     let count_sql = format!("SELECT COUNT(*) FROM nguoidung {conditions}");
     let total = sqlx::query_scalar::<_, i64>(AssertSqlSafe(count_sql))
         .bind(&q).bind(&role).bind(&active).fetch_one(&state.pool).await?;

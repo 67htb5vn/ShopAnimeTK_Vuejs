@@ -1,24 +1,33 @@
 <template>
   <section class="card order-list-card">
-    <div class="toolbar order-search-row">
+    <div class="list-header">
+      <div>
+        <strong>Danh sách hóa đơn</strong>
+        <span>{{ total }} hóa đơn</span>
+      </div>
+    </div>
+
+    <div class="control-panel order-control-panel">
       <input v-model.trim="keyword" class="search" placeholder="Tìm theo mã, khách hàng hoặc địa chỉ..."
         @keyup.enter="applyFilters" />
-      <button class="btn ghost" :disabled="loading" @click="resetAndLoad">{{ loading ? 'Đang tải...' : 'Tải lại'
-        }}</button>
-    </div>
-    <div class="filter-bar order-filter-row"><select v-model="statusFilter">
+      <select v-model="statusFilter" @change="applyFilters">
         <option value="">Tất cả trạng thái</option>
         <option v-for="s in statuses" :key="s.matt" :value="s.matt">{{ s.tentrangthai }}</option>
-      </select><select v-model="paymentFilter">
+      </select>
+      <select v-model="paymentFilter" @change="applyFilters">
         <option value="">Tất cả thanh toán</option>
         <option>Thanh toán khi nhận hàng</option>
         <option>Chuyển khoản ngân hàng</option>
-      </select><select v-model="sort">
+      </select>
+      <select v-model="sort" @change="applyFilters">
         <option value="newest">Mới nhất</option>
         <option value="oldest">Cũ nhất</option>
         <option value="amount_desc">Giá trị cao</option>
         <option value="amount_asc">Giá trị thấp</option>
-      </select><button class="btn primary" @click="applyFilters">Lọc</button></div>
+      </select>
+      <button class="btn ghost" :disabled="loading" @click="resetAndLoad">{{ loading ? 'Đang tải...' : 'Tải lại'
+        }}</button>
+    </div>
     <div v-if="error" class="alert error">{{ error }}</div>
     <div class="table-wrap">
       <table>
@@ -46,7 +55,7 @@
             <td><button class="btn ghost small" @click="openOrder(order.mahd)">Chi tiết</button></td>
           </tr>
           <tr v-if="!loading && filtered.length === 0">
-            <td colspan="8" class="empty-cell">Không tìm thấy hóa đơn phù hợp.</td>
+            <td colspan="8" class="empty-cell">{{ emptyMessage }}</td>
           </tr>
         </tbody>
       </table>
@@ -153,6 +162,10 @@ const page = ref(1), pageSize = ref(10), total = ref(0), totalPages = ref(0), st
 const filtered = computed(() => {
   const term = keyword.value.toLowerCase()
   return items.value.filter(order => [order.mahd, order.tenkh, order.mand, order.diachi, order.trangthai].some(value => String(value || '').toLowerCase().includes(term)))
+})
+const emptyMessage = computed(() => {
+  if (keyword.value || statusFilter.value || paymentFilter.value) return 'Không tìm thấy hóa đơn phù hợp.'
+  return 'Chưa có hóa đơn.'
 })
 const currentStatusIndex = computed(() => statuses.value.findIndex(status => status.matt === selected.value?.order.matt))
 const selectedStatusIndex = computed(() => statuses.value.findIndex(status => status.matt === newStatus.value))

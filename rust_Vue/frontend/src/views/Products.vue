@@ -1,34 +1,38 @@
 <template>
   <div v-if="error" class="alert error">{{ error }}</div>
   <section class="card product-list-card">
-    <div class="toolbar product-top-row">
-      <input class="search" v-model="keyword" placeholder="Tìm theo tên hoặc mã sản phẩm..." @keyup.enter="applyFilters" />
-      <div class="product-top-actions"><button class="btn ghost" @click="resetAndLoad">↻ Tải lại</button><button class="btn primary" @click="openCreate">+ Thêm sản phẩm</button></div>
+    <div class="list-header">
+      <div>
+        <strong>Danh sách sản phẩm</strong>
+        <span>{{ total }} sản phẩm</span>
+      </div>
+      <button class="btn primary" @click="openCreate">+ Thêm sản phẩm</button>
     </div>
-    <div class="filter-bar product-filter-row">
-      
-      <select v-model="categoryFilter">
+
+    <div class="control-panel product-control-panel">
+      <input class="search" v-model="keyword" placeholder="Tìm theo tên hoặc mã sản phẩm..." @keyup.enter="applyFilters" />
+      <select v-model="categoryFilter" @change="applyFilters">
         <option value="">Tất cả danh mục</option>
         <option v-for="c in categories" :key="c.madmh" :value="c.madmh.trim()">{{c.tendmh}}</option>
       </select>
-      <select v-model="animeFilter">
+      <select v-model="animeFilter" @change="applyFilters">
         <option value="">Tất cả anime</option>
         <option v-for="a in animes" :key="a.mahh" :value="a.mahh.trim()">{{a.tenhh}}</option>
       </select>
-      <select v-model="stockFilter">
+      <select v-model="stockFilter" @change="applyFilters">
         <option value="">Tất cả tồn kho</option>
         <option value="available">Còn hàng</option>
         <option value="low">Sắp hết</option>
         <option value="out">Hết hàng</option>
       </select>
-      <select v-model="sort">
+      <select v-model="sort" @change="applyFilters">
         <option value="newest">Mới nhất</option>
         <option value="name">Tên A–Z</option>
         <option value="price_asc">Giá tăng</option>
         <option value="price_desc">Giá giảm</option>
         <option value="stock">Tồn kho thấp</option>
       </select>
-      <button class="btn primary" @click="applyFilters">Áp dụng</button>
+      <button class="btn ghost" @click="resetAndLoad">Tải lại</button>
     </div>
     <div class="table-wrap">
       <table>
@@ -61,6 +65,9 @@
               <button class="btn danger" @click="remove(p)">Xóa</button>
             </td>
           </tr>
+          <tr v-if="!filtered.length">
+            <td class="empty-cell" colspan="8">{{ emptyMessage }}</td>
+          </tr>
         </tbody>
       </table>
     </div>
@@ -75,7 +82,6 @@
       </div>
 
       <div class="form-grid">
-        <label>Mã sản phẩm <input v-model="form.masp" :disabled="editing" placeholder="Bỏ trống để tự sinh" /></label>
         <label>Tên sản phẩm <input v-model="form.tensp" required /></label>
         <label>Giá <input v-model.number="form.gia" type="number" min="0" required /></label>
         <label>Số lượng <input v-model.number="form.soluong" type="number" min="0" required /></label>
@@ -173,6 +179,11 @@ const filtered = computed(() => {
   return products.value.filter(p => [p.masp, p.tensp, p.tendmh, p.tenhh].some(v => String(v || '').toLowerCase().includes(q)))
 })
 
+const emptyMessage = computed(() => {
+  if (keyword.value || categoryFilter.value || animeFilter.value || stockFilter.value) return 'Không tìm thấy sản phẩm phù hợp.'
+  return 'Chưa có sản phẩm.'
+})
+
 async function load() {
   try {
     error.value = ''
@@ -261,7 +272,7 @@ async function save() {
   try {
     saving.value = true
     error.value = ''
-    const payload = { ...form, masp: form.masp || null, madmh: form.madmh || null, mahh: form.mahh || null }
+    const payload = { ...form, masp: editing.value ? form.masp : null, madmh: form.madmh || null, mahh: form.mahh || null }
     const response = editing.value
       ? await api.put(`/products/${encodeURIComponent(form.masp)}`, payload)
       : await api.post('/products', payload)

@@ -268,6 +268,15 @@ html.dark textarea {
     border-color: #374151
 }
 
+html.dark .control-panel {
+    background: #1f2937;
+    border-color: #374151
+}
+
+html.dark .list-header strong {
+    color: #e5e7eb
+}
+
 html.dark th,
 html.dark .order-summary-grid>div,
 html.dark .status-option {
@@ -365,6 +374,65 @@ html.sidebar-compact .menu a span {
     margin-bottom: 14px;
 }
 
+.list-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 14px
+}
+
+.list-header>div {
+    display: grid;
+    gap: 3px
+}
+
+.list-header strong {
+    color: #374151;
+    font-size: 15px
+}
+
+.list-header span {
+    color: #8b94a0;
+    font-size: 12px;
+    font-weight: 700
+}
+
+.control-panel {
+    display: grid;
+    grid-template-columns: minmax(260px, 1fr) repeat(2, minmax(150px, 190px)) auto;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 14px;
+    padding: 12px;
+    border: 1px solid #eef0f3;
+    border-radius: 8px;
+    background: #fafbfc
+}
+
+.control-panel.compact {
+    grid-template-columns: minmax(260px, 1fr) auto
+}
+
+.control-panel.product-control-panel {
+    grid-template-columns: minmax(260px, 1fr) repeat(4, minmax(135px, 1fr)) auto
+}
+
+.control-panel.order-control-panel {
+    grid-template-columns: minmax(260px, 1fr) repeat(3, minmax(150px, 1fr)) auto
+}
+
+.control-panel .search {
+    max-width: none
+}
+
+.control-panel select,
+.control-panel input {
+    min-height: 42px;
+    border-radius: 7px;
+    background: #fff
+}
+
 .filter-bar {
     display: flex;
     gap: 9px;
@@ -397,7 +465,9 @@ html.sidebar-compact .menu a span {
 
 .list-controls-card>.table-wrap,
 .list-controls-card>.pagination,
-.list-controls-card>.alert {
+.list-controls-card>.alert,
+.list-controls-card>.list-header,
+.list-controls-card>.control-panel {
     flex-basis: 100%;
     width: 100%
 }
@@ -489,6 +559,18 @@ html.sidebar-compact .menu a span {
 }
 
 @media(max-width:760px) {
+    .control-panel,
+    .control-panel.compact,
+    .control-panel.product-control-panel,
+    .control-panel.order-control-panel {
+        grid-template-columns: 1fr
+    }
+
+    .list-header {
+        align-items: stretch;
+        flex-direction: column
+    }
+
     .order-filter-row {
         grid-template-columns: 1fr 1fr
     }
@@ -609,6 +691,16 @@ tr:last-child td {
     color: #3730a3;
     font-size: 12px;
     font-weight: 700;
+}
+
+.badge.success {
+    background: #ecfdf5;
+    color: #047857
+}
+
+.badge.locked {
+    background: #fff1f2;
+    color: #be123c
 }
 
 .actions {

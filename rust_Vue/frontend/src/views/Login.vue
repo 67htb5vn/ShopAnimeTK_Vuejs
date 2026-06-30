@@ -3,12 +3,10 @@
     <section class="login-card">
       <div class="login-brand">
         <div class="brand-logo">SA</div>
-        <div><strong>Shop Anime</strong><span>Admin Panel</span></div>
+        <div><strong>Shop Anime</strong></div>
       </div>
       <div class="login-heading">
-        <p class="eyebrow">KHU VỰC QUẢN TRỊ</p>
         <h1>Đăng nhập</h1>
-        <p>Chỉ tài khoản quản trị viên mới có thể truy cập.</p>
       </div>
       <form @submit.prevent="submit">
         <div v-if="error" class="alert error">{{ error }}</div>
