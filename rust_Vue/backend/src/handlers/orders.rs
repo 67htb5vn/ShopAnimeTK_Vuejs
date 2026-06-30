@@ -1,5 +1,6 @@
 use super::{ApiError, ApiResult};
 use crate::{
+    email::{is_order_notice_status, send_best_effort},
     models::{OrderDetail, OrderItem, OrderRow, OrderStatusHistory, PageResponse, UpdateOrderStatus},
     AppState,
 };
@@ -175,5 +176,35 @@ async fn update_status(
         .bind(id)
         .fetch_one(&state.pool)
         .await?;
+
+    if is_order_notice_status(status_id, order.trangthai.as_deref()) {
+        let customer = sqlx::query_as::<_, (Option<String>, Option<String>)>(
+            r#"
+            SELECT nd.email, nd.ten
+            FROM hoadon h
+            LEFT JOIN nguoidung nd ON nd.mand = h.mand
+            WHERE TRIM(h.mahd) = TRIM($1)
+            "#,
+        )
+        .bind(&order.mahd)
+        .fetch_optional(&state.pool)
+        .await?;
+
+        if let Some((email, name)) = customer {
+            let status = order.trangthai.as_deref().unwrap_or(status_id);
+            let subject = format!("Cap nhat don hang {}", order.mahd);
+            let body = format!(
+                "Xin chao {},\n\nDon hang {} cua ban da duoc cap nhat sang trang thai: {}.\nTong tien: {} VND\nHinh thuc thanh toan: {}\nDia chi nhan hang: {}\n\nCam on ban da mua hang tai Shop Anime TK.",
+                name.as_deref().unwrap_or("ban"),
+                order.mahd,
+                status,
+                order.thanhtien.unwrap_or(0.0),
+                order.htthanhtoan.as_deref().unwrap_or("-"),
+                order.diachi.as_deref().unwrap_or("-")
+            );
+            send_best_effort(email.as_deref(), &subject, &body).await;
+        }
+    }
+
     Ok(Json(order))
 }

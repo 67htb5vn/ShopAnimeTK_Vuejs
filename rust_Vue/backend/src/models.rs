@@ -60,6 +60,11 @@ pub struct ChangePasswordInput {
     pub matkhau_moi: String,
 }
 
+#[derive(Deserialize)]
+pub struct ForgotPasswordInput {
+    pub email: String,
+}
+
 #[derive(Serialize, FromRow)]
 pub struct DashboardStats {
     pub total_products: i64,

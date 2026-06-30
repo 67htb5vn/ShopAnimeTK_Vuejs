@@ -68,7 +68,6 @@
     <div class="drawer-panel">
       <div class="drawer-header">
         <div>
-          <p class="eyebrow">CHI TIẾT HÓA ĐƠN</p>
           <h2>{{ selected ? `Hóa đơn ${selected.order.mahd}` : 'Đang tải...' }}</h2>
         </div>
         <button class="btn ghost" @click="closeDrawer">Đóng</button>

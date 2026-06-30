@@ -1,6 +1,7 @@
 use super::ApiResult;
 use crate::{
     db::new_id,
+    email::send_best_effort,
     models::{PageResponse, UserInput, UserRow},
     AppState,
 };
@@ -52,6 +53,7 @@ async fn create(
 ) -> ApiResult<(StatusCode, Json<UserRow>)> {
     let id = input.mand.unwrap_or_else(|| new_id("U"));
     let pass = input.matkhau.unwrap_or_else(|| "123456".to_string());
+    let initial_password = pass.clone();
     let active = input.trangthai.unwrap_or_else(|| "1".to_string());
     let role = input.phanquyen.unwrap_or_else(|| "0".to_string());
 
@@ -68,6 +70,17 @@ async fn create(
     .bind(id).bind(input.ten).bind(input.ngaysinh).bind(input.taikhoan).bind(pass)
     .bind(active).bind(role).bind(input.email)
     .fetch_one(&state.pool).await?;
+
+    let subject = "Tai khoan Shop Anime TK da duoc tao";
+    let body = format!(
+        "Xin chao {},\n\nTai khoan cua ban tren he thong Shop Anime TK da duoc tao.\n\nTai khoan: {}\nMat khau: {}\nQuyen: {}\n\nVui long dang nhap va doi mat khau sau khi nhan duoc email nay.",
+        row.ten.as_deref().unwrap_or("ban"),
+        row.taikhoan.as_deref().unwrap_or("-"),
+        initial_password,
+        if row.phanquyen.as_deref() == Some("1") { "Admin" } else { "User" }
+    );
+    send_best_effort(row.email.as_deref(), subject, &body).await;
+
     Ok((StatusCode::CREATED, Json(row)))
 }
 

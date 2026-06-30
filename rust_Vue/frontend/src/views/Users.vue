@@ -5,7 +5,6 @@
         <strong>Danh sách người dùng</strong>
         <span>{{ total }} tài khoản</span>
       </div>
-      <button class="btn primary" @click="open({})">+ Thêm người dùng</button>
     </div>
 
     <div class="control-panel">
@@ -49,8 +48,7 @@
               </span>
             </td>
             <td class="actions">
-              <button class="btn ghost" @click="open(u)">Sửa</button>
-              <button class="btn danger" @click="remove(u)">Xóa</button>
+              <button class="btn ghost" @click="open(u)">Trạng thái</button>
             </td>
           </tr>
           <tr v-if="!filtered.length">
@@ -65,21 +63,14 @@
   <div v-if="show" class="drawer" @click.self="show = false">
     <form class="drawer-panel" @submit.prevent="save">
       <div class="drawer-header">
-        <h2>{{ editing ? 'Sửa người dùng' : 'Thêm người dùng' }}</h2>
+        <h2>Cập nhật trạng thái</h2>
         <button class="btn ghost" type="button" @click="show = false">Đóng</button>
       </div>
       <div class="form-grid">
-        <label>Tên <input v-model="form.ten" required /></label>
-        <label>Tài khoản <input v-model="form.taikhoan" required /></label>
-        <label>Mật khẩu <input type="password" v-model="form.matkhau" placeholder="Bỏ trống nếu không đổi" /></label>
-        <label>Email <input v-model="form.email" /></label>
-        <label>Ngày sinh <input type="date" v-model="form.ngaysinh" /></label>
-        <label>Quyền
-          <select v-model="form.phanquyen">
-            <option value="0">User</option>
-            <option value="1">Admin</option>
-          </select>
-        </label>
+        <label>Tên <input :value="form.ten || '-'" disabled /></label>
+        <label>Tài khoản <input :value="form.taikhoan || '-'" disabled /></label>
+        <label>Email <input :value="form.email || '-'" disabled /></label>
+        <label>Quyền <input :value="form.phanquyen === '1' ? 'Admin' : 'User'" disabled /></label>
         <label>Trạng thái
           <select v-model="form.trangthai">
             <option value="1">Hoạt động</option>
@@ -88,7 +79,7 @@
         </label>
       </div>
       <div class="actions" style="margin-top:16px">
-        <button class="btn primary">Lưu</button>
+        <button class="btn primary">Lưu trạng thái</button>
       </div>
     </form>
   </div>
@@ -98,13 +89,13 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { api } from '../api/http'
 import Pagination from '../components/Pagination.vue'
-import { confirmAction, notify } from '../services/ui'
+import { notify } from '../services/ui'
 
 const items = ref([])
 const keyword = ref('')
 const show = ref(false)
 const editing = ref(null)
-const form = reactive({ ten: '', taikhoan: '', matkhau: '', email: '', ngaysinh: null, trangthai: '1', phanquyen: '0' })
+const form = reactive({ ten: '', taikhoan: '', email: '', ngaysinh: null, trangthai: '1', phanquyen: '0' })
 const page = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
@@ -138,23 +129,17 @@ function changePage(value) { page.value = value; load() }
 function changePageSize(value) { pageSize.value = value; page.value = 1; load() }
 function resetAndLoad() { keyword.value = ''; roleFilter.value = ''; activeFilter.value = ''; page.value = 1; load() }
 function open(u) {
-  editing.value = u.mand ? u : null
-  Object.assign(form, { ten: '', taikhoan: '', matkhau: '', email: '', ngaysinh: null, trangthai: '1', phanquyen: '0' }, u, { matkhau: '' })
+  editing.value = u
+  Object.assign(form, { ten: '', taikhoan: '', email: '', ngaysinh: null, trangthai: '1', phanquyen: '0' }, u)
   show.value = true
 }
 async function save() {
-  const payload = { ...form, matkhau: form.matkhau || null }
-  if (editing.value) await api.put(`/users/${editing.value.mand}`, payload)
-  else await api.post('/users', payload)
+  if (!editing.value) return
+  const payload = { ...editing.value, trangthai: form.trangthai }
+  await api.put(`/users/${editing.value.mand}`, payload)
   show.value = false
   await load()
-}
-async function remove(u) {
-  if (await confirmAction(`Bạn có chắc muốn xóa ${u.ten}?`)) {
-    await api.delete(`/users/${u.mand}`)
-    await load()
-    notify('Đã xóa người dùng.')
-  }
+  notify('Đã cập nhật trạng thái người dùng.')
 }
 onMounted(load)
 </script>

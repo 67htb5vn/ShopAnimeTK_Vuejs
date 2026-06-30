@@ -1,4 +1,5 @@
 mod db;
+mod email;
 mod handlers;
 mod models;
 

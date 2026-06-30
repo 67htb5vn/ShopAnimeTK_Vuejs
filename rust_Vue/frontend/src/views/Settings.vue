@@ -2,7 +2,6 @@
     <div class="settings-grid">
         <section class="card settings-card">
             <div>
-                <p class="eyebrow">CÁ NHÂN HÓA</p>
                 <h2>Giao diện</h2>
                 <p class="muted">Tùy chỉnh giao diện trên thiết bị này.</p>
             </div>
@@ -21,7 +20,6 @@
         </section>
         <section class="card settings-card">
             <div>
-                <p class="eyebrow">TÀI KHOẢN ADMIN</p>
                 <h2>Thông tin tài khoản</h2>
             </div>
             <form class="settings-form" @submit.prevent="saveProfile"><label>Tài khoản<input :value="profile.taikhoan"
