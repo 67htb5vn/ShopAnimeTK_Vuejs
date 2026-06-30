@@ -107,8 +107,26 @@
     display: block !important;
 }
 
-.product-single-carousel:not(.owl-loaded) > div:not(:first-child) {
+.product-single-carousel:not(.owl-loaded)>div:not(:first-child) {
     display: none;
+}
+
+.products-slider:not(.owl-loaded) {
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 2rem;
+}
+
+@media (max-width: 991px) {
+    .products-slider:not(.owl-loaded) {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 767px) {
+    .products-slider:not(.owl-loaded) {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
 }
 
 .product-action {
@@ -118,7 +136,7 @@
     gap: 10px;
 }
 
-.product-action > div,
+.product-action>div,
 .product-action .product-single-qty {
     display: flex;
     align-items: center;
@@ -196,7 +214,7 @@
 </style>
 
 <script setup lang="ts">
-import { ref, onMounted, watch, computed } from 'vue';
+import { ref, onMounted, watch, computed, nextTick } from 'vue';
 import axios from 'axios';
 import { RouterLink, useRoute, useRouter } from 'vue-router';
 import type { sanpham } from '@/models/sanpham';
@@ -204,6 +222,12 @@ import noUiSlider from 'nouislider';
 import 'nouislider/dist/nouislider.css';
 import { useGiohangStore } from '@/stores/XemnhanhGiohang'
 import Danhgia from '@/components/Danhgia/Danhgia.vue'
+import DetailSanphamLienquan from '@/components/Sanpham/DetailSanphamLienquan.vue'
+import DetailSanphamNoibat from '@/components/Sanpham/DetailSanphamNoibat.vue'
+import DetailSanphamMuanhieu from '@/components/Sanpham/DetailSanphamMuanhieu.vue'
+import DetailSanphamDanhgiacao from '@/components/Sanpham/DetailSanphamDanhgiacao.vue'
+import DetailSanphamMoiramat from '@/components/Sanpham/DetailSanphamMoiramat.vue'
+import type { DetailProduct } from '@/models/detailProduct'
 import { getProductImagePaths, handleProductImageError } from '@/utils/productImage'
 
 const giohangStore = useGiohangStore()
@@ -233,6 +257,49 @@ const isOverload = ref(false)
 const reviewCount = ref(0)
 const averageRating = ref(0)
 const activeTab = ref<'description' | 'reviews'>('description')
+const relatedSlider = ref<HTMLElement | null>(null)
+const productGroups = ref({
+    related: [] as DetailProduct[],
+    featured: [] as DetailProduct[],
+    bestSelling: [] as DetailProduct[],
+    newest: [] as DetailProduct[],
+    topRated: [] as DetailProduct[]
+})
+
+const initializeRelatedSlider = async (attempt = 0) => {
+    await nextTick()
+    const jquery = (window as any).jQuery
+    if (!relatedSlider.value || !jquery?.fn?.owlCarousel) {
+        if (attempt < 10) window.setTimeout(() => initializeRelatedSlider(attempt + 1), 150)
+        return
+    }
+
+    const slider = jquery(relatedSlider.value)
+    if (slider.hasClass('owl-loaded')) return
+    slider.owlCarousel({
+        items: 4,
+        margin: 20,
+        nav: true,
+        dots: true,
+        loop: productGroups.value.related.length > 4,
+        responsive: {
+            0: { items: 2 },
+            768: { items: 3 },
+            992: { items: 4 }
+        }
+    })
+}
+
+const loadProductGroups = async () => {
+    if (!masp) return
+    try {
+        const response = await axios.get(`/api/detail-product-groups/${masp}`)
+        productGroups.value = response.data
+        await initializeRelatedSlider()
+    } catch (error) {
+        console.error('Không thể tải các nhóm sản phẩm:', error)
+    }
+}
 
 const updateReviewSummary = (summary: { count: number; average: number }) => {
     reviewCount.value = summary.count
@@ -298,6 +365,7 @@ const loadSanphamChitiet = async () => {
         lines.value = sp.value?.thongtin
             ?.split(/\r\n|\r|\n/)
             .filter(x => x.trim() !== '') || [];
+        void loadProductGroups()
     } catch (error) {
         console.error("Lỗi:", error);
     }
@@ -463,9 +531,9 @@ watch(
                             <div class="product-single-carousel owl-carousel owl-theme show-nav-hover">
                                 <div v-for="(image, index) in productImages" :key="`${image}-${index}`">
                                     <div class="product-item">
-                                        <img class="product-single-image" :src="image"
-                                            :data-zoom-image="image" width="468" height="468"
-                                            :alt="sp?.tensp || 'Sản phẩm'" @error="handleProductImageError" />
+                                        <img class="product-single-image" :src="image" :data-zoom-image="image"
+                                            width="468" height="468" :alt="sp?.tensp || 'Sản phẩm'"
+                                            @error="handleProductImageError" />
                                     </div>
                                 </div>
                             </div>
@@ -478,9 +546,9 @@ watch(
                         <div class="prod-thumbnail owl-dots">
                             <div v-for="(image, index) in productImages" :key="`thumb-${image}-${index}`">
                                 <div class="owl-dot">
-                                    <img class="product-single-image" :src="image"
-                                        :data-zoom-image="image" width="110" height="110"
-                                        :alt="`${sp?.tensp || 'Sản phẩm'} - ảnh ${index + 1}`" @error="handleProductImageError" />
+                                    <img class="product-single-image" :src="image" :data-zoom-image="image" width="110"
+                                        height="110" :alt="`${sp?.tensp || 'Sản phẩm'} - ảnh ${index + 1}`"
+                                        @error="handleProductImageError" />
                                 </div>
                             </div>
                             <!-- @foreach (var image in Model.Hinhanhsps)
@@ -538,7 +606,8 @@ watch(
                             </div>
 
 
-                            <a href="#product-reviews-content" class="rating-link" @click.prevent="activeTab = 'reviews'">
+                            <a href="#product-reviews-content" class="rating-link"
+                                @click.prevent="activeTab = 'reviews'">
                                 ( {{ reviewCount }} Đánh giá )
                             </a>
                         </div>
@@ -568,7 +637,7 @@ watch(
                                 Danh mục hàng:
                                 <strong>
                                     <a :href="`/Danhmuchang?MaDmh=${sp?.madmh}`" class="product-category">{{ sp?.tendmh
-                                    }}</a>
+                                        }}</a>
                                 </strong>
                             </li>
 
@@ -576,7 +645,7 @@ watch(
                                 Hoạt hình:
                                 <strong>
                                     <a :href="`/Hoathinh?MaHh=${sp?.tenhh}`" class="product-category">{{ sp?.tenhh
-                                    }}</a>
+                                        }}</a>
                                 </strong>
                             </li>
                             <li>
@@ -642,7 +711,9 @@ watch(
                 <ul class="nav nav-tabs" role="tablist">
                     <li class="nav-item">
                         <a class="nav-link" :class="{ active: activeTab === 'description' }" id="product-tab-desc"
-                            href="#product-desc-content" role="tab" @click.prevent="activeTab = 'description'">Thông tin sản phẩm</a>
+                            href="#product-desc-content" role="tab" @click.prevent="activeTab = 'description'">Thông tin
+                            sản
+                            phẩm</a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" :class="{ active: activeTab === 'reviews' }" id="product-tab-reviews"
@@ -653,8 +724,8 @@ watch(
                 </ul>
 
                 <div class="tab-content">
-                    <div v-show="activeTab === 'description'" class="tab-pane fade show active" id="product-desc-content" role="tabpanel"
-                        aria-labelledby="product-tab-desc">
+                    <div v-show="activeTab === 'description'" class="tab-pane fade show active"
+                        id="product-desc-content" role="tabpanel" aria-labelledby="product-tab-desc">
                         <div class="product-desc-content">
                             <p style="margin-bottom:15px;">
                                 Chào mừng bạn đến với thế giới mua sắm đa dạng dành cho fan Anime, nơi mỗi sản phẩm
@@ -673,8 +744,8 @@ watch(
                         </div>
                         <!-- End .product-desc-content -->
                     </div>
-                    <div v-show="activeTab === 'reviews'" class="tab-pane fade show active" id="product-reviews-content" role="tabpanel"
-                        aria-labelledby="product-tab-reviews">
+                    <div v-show="activeTab === 'reviews'" class="tab-pane fade show active" id="product-reviews-content"
+                        role="tabpanel" aria-labelledby="product-tab-reviews">
                         <div class="product-reviews-content">
                             <h3 class="reviews-title">Đánh giá cho {{ sp?.tensp }}</h3>
 
@@ -738,6 +809,34 @@ watch(
 
             <div class="products-section pt-0">
                 <h2 class="section-title">Sản phẩm liên quan</h2>
+                <div ref="relatedSlider" class="products-slider owl-carousel owl-theme dots-top dots-small">
+                    <DetailSanphamLienquan :products="productGroups.related" />
+                </div>
+            </div>
+
+            <hr class="mt-5 mb-5">
+
+            <section class="product-widgets-container row pb-2">
+                <div class="col-lg-3 col-sm-6 pb-5 pb-lg-0">
+                    <h4 class="section-sub-title">Nổi bật nhất</h4>
+                    <DetailSanphamNoibat :products="productGroups.featured" />
+                </div>
+                <div class="col-lg-3 col-sm-6 pb-5 pb-lg-0">
+                    <h4 class="section-sub-title">Được mua nhiều</h4>
+                    <DetailSanphamMuanhieu :products="productGroups.bestSelling" />
+                </div>
+                <div class="col-lg-3 col-sm-6 pb-5 pb-lg-0">
+                    <h4 class="section-sub-title">Mới ra mắt</h4>
+                    <DetailSanphamMoiramat :products="productGroups.newest" />
+                </div>
+                <div class="col-lg-3 col-sm-6 pb-5 pb-lg-0">
+                    <h4 class="section-sub-title">Đánh giá cao</h4>
+                    <DetailSanphamDanhgiacao :products="productGroups.topRated" />
+                </div>
+            </section>
+
+            <div v-if="false" class="products-section pt-0">
+                <h2 class="section-title">Sản phẩm liên quan</h2>
                 <div class="products-slider owl-carousel owl-theme dots-top dots-small">
                     @await Component.InvokeAsync("Sanpham", new { view = "Related", MaHh = @Model.MaHh })
                 </div>
@@ -749,7 +848,7 @@ watch(
 
 
 
-            <div class="product-widgets-container row pb-2">
+            <div v-if="false" class="product-widgets-container row pb-2">
                 <div class="col-lg-3 col-sm-6 pb-5 pb-md-0">
                     <h4 class="section-sub-title">Nổi bật nhất</h4>
                     @await Component.InvokeAsync("Sanpham", new { view = "Featured_Detail" })

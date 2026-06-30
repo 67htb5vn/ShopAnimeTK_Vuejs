@@ -551,6 +551,71 @@ app.get('/api/checkauth', (req, res) => {
     });
 });
 
+app.get('/api/detail-product-groups/:masp', async (req, res) => {
+    try {
+        const currentId = String(req.params.masp || '').trim()
+        const result = await pool.query(`
+            SELECT TRIM(sp.masp) AS masp, sp.tensp, sp.gia, TRIM(sp.madmh) AS madmh,
+                   TRIM(sp.mahh) AS mahh, dmh.tendmh,
+                   COALESCE((
+                       SELECT AVG(dg.sao) FROM public.danhgia dg
+                       WHERE TRIM(dg.masp) = TRIM(sp.masp)
+                   ), 0)::float AS diemtrungbinh,
+                   COALESCE((
+                       SELECT COUNT(*) FROM public.danhgia dg
+                       WHERE TRIM(dg.masp) = TRIM(sp.masp)
+                   ), 0)::integer AS sodanhgia,
+                   COALESCE((
+                       SELECT SUM(ct.soluong) FROM public.cthoadon ct
+                       WHERE TRIM(ct.masp) = TRIM(sp.masp)
+                   ), 0)::integer AS daban,
+                   COALESCE((
+                       SELECT json_agg(json_build_object(
+                           'maha', ha.maha,
+                           'duongdan', ha.duongdan,
+                           'anhdaidien', ha.anhdaidien
+                       ) ORDER BY ha.anhdaidien, ha.maha)
+                       FROM public.hinhanhsp ha
+                       WHERE TRIM(ha.masp) = TRIM(sp.masp)
+                   ), '[]'::json) AS hinhanhsps
+            FROM public.sanpham sp
+            LEFT JOIN public.danhmuchang dmh ON TRIM(dmh.madmh) = TRIM(sp.madmh)
+            ORDER BY TRIM(sp.masp)
+        `)
+
+        const products = result.rows
+        const current = products.find(product => product.masp === currentId)
+        if (!current) return res.status(404).json({ message: 'Không tìm thấy sản phẩm' })
+
+        const related = products
+            .filter(product => product.masp !== currentId && product.mahh === current.mahh)
+            .sort(() => Math.random() - 0.5)
+            .slice(0, 6)
+
+        const categoryProducts = new Map()
+        products
+            .filter(product => !['DMH002', 'DMH003'].includes(product.madmh))
+            .forEach(product => {
+                if (!categoryProducts.has(product.madmh)) categoryProducts.set(product.madmh, product)
+            })
+
+        const numericId = product => Number(String(product.masp || '').replace(/\D/g, '')) || 0
+        res.json({
+            related,
+            featured: [...categoryProducts.values()].slice(0, 4),
+            bestSelling: [...products].sort((a, b) => b.daban - a.daban).slice(0, 4),
+            newest: [...products].sort((a, b) => numericId(b) - numericId(a)).slice(0, 4),
+            topRated: products
+                .filter(product => product.sodanhgia > 0)
+                .sort((a, b) => b.diemtrungbinh - a.diemtrungbinh || b.sodanhgia - a.sodanhgia)
+                .slice(0, 4)
+        })
+    } catch (error) {
+        console.error(error)
+        res.status(500).json({ message: 'Không thể tải các nhóm sản phẩm' })
+    }
+})
+
 app.get('/api/reviews/:masp', async (req, res) => {
     try {
         const result = await pool.query(`
