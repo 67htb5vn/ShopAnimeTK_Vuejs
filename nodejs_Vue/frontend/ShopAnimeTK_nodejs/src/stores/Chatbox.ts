@@ -9,7 +9,9 @@ export interface ChatMessage {
     createdAt: string
 }
 
-const STORAGE_KEY = 'shopanime_chat_history_v1'
+// Đổi phiên bản khi thay model để không nạp lại câu trả lời đã lưu từ model cũ.
+const STORAGE_KEY = 'shopanime_chat_history_ollama_qwen25_v2'
+const LEGACY_STORAGE_KEYS = ['shopanime_chat_history_v1']
 const greeting = (): ChatMessage => ({
     id: 'welcome',
     role: 'assistant',
@@ -19,6 +21,7 @@ const greeting = (): ChatMessage => ({
 
 const readHistory = (): ChatMessage[] => {
     try {
+        LEGACY_STORAGE_KEYS.forEach(key => localStorage.removeItem(key))
         const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')
         return Array.isArray(stored) && stored.length ? stored.slice(-50) : [greeting()]
     } catch {

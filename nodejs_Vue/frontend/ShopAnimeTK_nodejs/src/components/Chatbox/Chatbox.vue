@@ -81,7 +81,7 @@ watch(() => route.fullPath, () => {
                 <div class="chat-title"><span class="bot-icon">🤖</span><strong>Trợ lý Tôm Ká</strong></div>
                 <div class="header-actions">
                     <button type="button" title="Xóa hội thoại" aria-label="Xóa hội thoại" @click="chatStore.clearHistory">↻</button>
-                    <button type="button" title="Thu nhỏ" aria-label="Thu nhỏ" @click="toggleChat">⌄</button>
+                    <button type="button" class="close-chat" title="Đóng chatbox" aria-label="Đóng chatbox" @click="toggleChat">&times;</button>
                 </div>
             </header>
 
@@ -116,6 +116,8 @@ watch(() => route.fullPath, () => {
 .bot-icon { width: 32px; height: 32px; }
 .header-actions { display: flex; gap: 4px; }
 .header-actions button { width: 30px; height: 30px; padding: 0; border: 0; background: transparent; color: #fff; font-size: 20px; cursor: pointer; }
+.header-actions .close-chat { display: inline-flex; align-items: center; justify-content: center; font-size: 26px; font-weight: 400; line-height: 1; }
+.header-actions button:hover { border-radius: 50%; background: rgb(255 255 255 / 16%); }
 .chat-messages { overflow-y: auto; padding: 16px 13px; background: #f8fcfe; scroll-behavior: smooth; }
 .message-row { display: flex; align-items: flex-end; gap: 8px; margin-bottom: 13px; }
 .message-row.user { justify-content: flex-end; }

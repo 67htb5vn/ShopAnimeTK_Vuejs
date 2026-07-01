@@ -274,6 +274,47 @@ td .form-check-input {
     margin: 0 auto !important;
 }
 
+.table-cart .product-image-container {
+    position: relative;
+    display: block;
+    overflow: visible;
+}
+
+.table-cart .product-image-container .btn-remove {
+    position: absolute !important;
+    top: -9px !important;
+    right: -9px !important;
+    z-index: 3;
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    width: 24px !important;
+    min-width: 24px !important;
+    height: 24px !important;
+    min-height: 24px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 1px solid #dedede !important;
+    border-radius: 50% !important;
+    background: #fff !important;
+    color: #555 !important;
+    font-size: 11px !important;
+    line-height: 1 !important;
+    box-shadow: 0 2px 7px rgb(0 0 0 / 18%);
+    cursor: pointer;
+}
+
+.table-cart .product-image-container .btn-remove:hover {
+    border-color: #dc3545 !important;
+    background: #dc3545 !important;
+    color: #fff !important;
+}
+
+.table-cart .product-image-container .btn-remove:disabled {
+    cursor: wait;
+    opacity: 0.55;
+}
+
 .table-cart .product-image {
     display: flex !important;
     align-items: center;
