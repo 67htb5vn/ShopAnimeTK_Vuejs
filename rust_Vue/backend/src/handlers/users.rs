@@ -1,4 +1,4 @@
-use super::ApiResult;
+use super::{ApiError, ApiResult};
 use crate::{
     db::new_id,
     email::send_best_effort,
@@ -100,7 +100,7 @@ async fn update(
                 trangthai=CASE WHEN $6='1' THEN B'1' ELSE B'0' END,
                 phanquyen=CASE WHEN $7='1' THEN B'1' ELSE B'0' END,
                 email=$8
-            WHERE mand=$1
+            WHERE TRIM(mand)=TRIM($1)
             "#,
         )
         .bind(&id)
@@ -121,7 +121,7 @@ async fn update(
                 trangthai=CASE WHEN $5='1' THEN B'1' ELSE B'0' END,
                 phanquyen=CASE WHEN $6='1' THEN B'1' ELSE B'0' END,
                 email=$7
-            WHERE mand=$1
+            WHERE TRIM(mand)=TRIM($1)
             "#,
         )
         .bind(&id)
@@ -136,9 +136,10 @@ async fn update(
     }
 
     let row = sqlx::query_as::<_, UserRow>(
-        r#"SELECT mand, ten, ngaysinh, taikhoan, trangthai::text AS trangthai, phanquyen::text AS phanquyen, email, thoigian
-           FROM nguoidung WHERE mand=$1"#,
-    ).bind(id).fetch_one(&state.pool).await?;
+        r#"SELECT TRIM(mand) AS mand, ten, ngaysinh, taikhoan, trangthai::text AS trangthai, phanquyen::text AS phanquyen, email, thoigian
+           FROM nguoidung WHERE TRIM(mand)=TRIM($1)"#,
+    ).bind(&id).fetch_optional(&state.pool).await?
+        .ok_or_else(|| ApiError::not_found("Không tìm thấy người dùng"))?;
 
     Ok(Json(row))
 }

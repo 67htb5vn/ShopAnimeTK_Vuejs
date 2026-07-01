@@ -44,15 +44,17 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="order in filtered" :key="order.mahd">
+          <tr v-for="order in filtered" :key="order.mahd" class="clickable-row" tabindex="0"
+            @click="openOrder(order.mahd)" @keydown.enter.prevent="openOrder(order.mahd)"
+            @keydown.space.prevent="openOrder(order.mahd)">
             <td><strong>{{ order.mahd }}</strong></td>
             <td>{{ formatDate(order.ngaylap) }}</td>
             <td>{{ order.tenkh || order.mand || '-' }}</td>
             <td>{{ order.diachi || '-' }}</td>
             <td>{{ order.htthanhtoan || '-' }}</td>
             <td>{{ formatMoney(order.thanhtien) }}</td>
-            <td><span class="badge">{{ order.trangthai || 'Chưa có' }}</span></td>
-            <td><button class="btn ghost small" @click="openOrder(order.mahd)">Chi tiết</button></td>
+            <td><span class="badge order-status" :class="statusClass(order)">{{ order.trangthai || 'Chưa có' }}</span></td>
+            <td><button class="btn ghost small" @click.stop="openOrder(order.mahd)">Chi tiết</button></td>
           </tr>
           <tr v-if="!loading && filtered.length === 0">
             <td colspan="8" class="empty-cell">{{ emptyMessage }}</td>
@@ -87,7 +89,7 @@
           <h3>Cập nhật trạng thái</h3>
           <div class="status-options" role="radiogroup" aria-label="Chọn trạng thái mới">
             <button v-for="(status, index) in statuses" :key="status.matt" type="button" class="status-option"
-              :class="{ active: newStatus === status.matt, current: selected.order.matt === status.matt, passed: isStatusLocked(index) }"
+              :class="[statusClass(status), { active: newStatus === status.matt, current: selected.order.matt === status.matt, passed: isStatusLocked(index) }]"
               :disabled="saving || isStatusLocked(index)" :aria-pressed="newStatus === status.matt"
               @click="newStatus = status.matt">
               <span class="status-step">{{ index + 1 }}</span>
@@ -98,7 +100,7 @@
           </div>
           <div class="status-actions">
             <span class="muted">Chỉ có thể chuyển sang trạng thái tiếp theo.</span>
-            <button class="btn primary" :disabled="!canUpdate" @click="updateStatus">{{ saving ? 'Đang lưu...' : 'Cậpnhật trạng thái' }}</button>
+            <button class="btn primary" :disabled="!canUpdate" @click="updateStatus">{{ saving ? 'Đang lưu...' : 'Cập nhật trạng thái' }}</button>
           </div>
         </section>
         <section class="detail-section">
@@ -133,7 +135,7 @@
           <h3>Lịch sử trạng thái</h3>
           <ol v-if="selected.status_history.length" class="status-history">
             <li v-for="(status, index) in selected.status_history"
-              :key="`${status.matt}-${status.ngaycapnhat}-${index}`"><span class="history-dot"></span>
+              :key="`${status.matt}-${status.ngaycapnhat}-${index}`"><span class="history-dot" :class="statusClass(status)"></span>
               <div><strong>{{ status.tentrangthai || status.matt || 'Không xác định' }}</strong><small>{{
                 formatDateTime(status.ngaycapnhat) }}</small></div>
             </li>
@@ -176,6 +178,18 @@ const canUpdate = computed(() =>
 const getErrorMessage = (err, fallback) => err.response?.data?.message || fallback
 const formatDateTime = value => value ? new Date(value).toLocaleString('vi-VN') : '-'
 const isStatusLocked = index => currentStatusIndex.value >= 0 && index <= currentStatusIndex.value
+function normalizeStatus(value) {
+  return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+}
+function statusClass(status) {
+  const raw = normalizeStatus(`${status?.matt || ''} ${status?.trangthai || ''} ${status?.tentrangthai || ''}`)
+  if (!raw.trim()) return 'status-empty'
+  if (raw.includes('huy') || raw.includes('cancel')) return 'status-cancelled'
+  if (raw.includes('hoan') || raw.includes('thanh cong') || raw.includes('da giao') || raw.includes('done')) return 'status-done'
+  if (raw.includes('giao') || raw.includes('van chuyen') || raw.includes('ship')) return 'status-shipping'
+  if (raw.includes('xac nhan') || raw.includes('xu ly') || raw.includes('cho') || raw.includes('pending')) return 'status-pending'
+  return 'status-processing'
+}
 
 async function load() {
   loading.value = true; error.value = ''

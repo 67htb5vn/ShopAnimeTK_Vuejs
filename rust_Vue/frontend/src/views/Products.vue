@@ -43,7 +43,8 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="p in filtered" :key="p.masp">
+          <tr v-for="p in filtered" :key="p.masp" class="clickable-row" tabindex="0"
+            @click="openEdit(p)" @keydown.enter.prevent="openEdit(p)" @keydown.space.prevent="openEdit(p)">
             <td>
               <img
                 v-if="p.anhdaidien && !brokenImages.has(p.masp)"
@@ -61,8 +62,8 @@
             <td>{{ p.tendmh || p.madmh || '-' }}</td>
             <td>{{ p.tenhh || p.mahh || '-' }}</td>
             <td class="actions">
-              <button class="btn ghost" @click="openEdit(p)">Sửa</button>
-              <button class="btn danger" @click="remove(p)">Xóa</button>
+              <button class="btn ghost" @click.stop="openEdit(p)">Sửa</button>
+              <button class="btn danger" @click.stop="remove(p)">Xóa</button>
             </td>
           </tr>
           <tr v-if="!filtered.length">

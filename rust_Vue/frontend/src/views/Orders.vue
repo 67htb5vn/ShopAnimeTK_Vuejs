@@ -24,7 +24,7 @@
             <td>{{ o.diachi }}</td>
             <td>{{ o.htthanhtoan }}</td>
             <td>{{ formatMoney(o.thanhtien) }}</td>
-            <td><span class="badge">{{ o.trangthai || 'Chưa có' }}</span></td>
+            <td><span class="badge order-status" :class="statusClass(o)">{{ o.trangthai || 'Chưa có' }}</span></td>
             <td><button class="btn ghost" @click="open(o)">Chi tiết</button></td>
           </tr>
         </tbody>
@@ -74,6 +74,16 @@
 import { computed, onMounted, ref } from 'vue'; import { api, formatDate, formatMoney } from '../api/http'
 const items = ref([]), statuses = ref([]), selected = ref(null), keyword = ref(''), newStatus = ref('')
 const filtered = computed(() => items.value.filter(o => [o.mahd, o.tenkh, o.diachi, o.trangthai].some(v => String(v || '').toLowerCase().includes(keyword.value.toLowerCase()))))
+function normalizeStatus(value) { return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase() }
+function statusClass(status) {
+  const raw = normalizeStatus(`${status?.matt || ''} ${status?.trangthai || ''} ${status?.tentrangthai || ''}`)
+  if (!raw.trim()) return 'status-empty'
+  if (raw.includes('huy') || raw.includes('cancel')) return 'status-cancelled'
+  if (raw.includes('hoan') || raw.includes('thanh cong') || raw.includes('da giao') || raw.includes('done')) return 'status-done'
+  if (raw.includes('giao') || raw.includes('van chuyen') || raw.includes('ship')) return 'status-shipping'
+  if (raw.includes('xac nhan') || raw.includes('xu ly') || raw.includes('cho') || raw.includes('pending')) return 'status-pending'
+  return 'status-processing'
+}
 async function load() { items.value = (await api.get('/orders')).data; statuses.value = (await api.get('/statuses')).data }
 async function open(o) { selected.value = (await api.get(`/orders/${o.mahd}`)).data; newStatus.value = selected.value.order.matt || '' }
 async function updateStatus() { if (!newStatus.value) return; const { data } = await api.post(`/orders/${selected.value.order.mahd}/status`, { matt: newStatus.value }); selected.value.order = data; await load() }

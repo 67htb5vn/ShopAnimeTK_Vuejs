@@ -1,6 +1,12 @@
 use super::ApiResult;
 use crate::{models::{DashboardRevenuePoint, DashboardSlice, DashboardStats, DashboardVisuals, OrderRow}, AppState};
-use axum::{extract::State, routing::get, Json, Router};
+use axum::{extract::{Query, State}, routing::get, Json, Router};
+use serde::Deserialize;
+
+#[derive(Deserialize)]
+struct VisualsQuery {
+    start_month: Option<String>,
+}
 
 pub fn routes() -> Router<AppState> {
     Router::new()
@@ -24,15 +30,36 @@ async fn stats(State(state): State<AppState>) -> ApiResult<Json<DashboardStats>>
     Ok(Json(row))
 }
 
-async fn visuals(State(state): State<AppState>) -> ApiResult<Json<DashboardVisuals>> {
+async fn visuals(State(state): State<AppState>, Query(query): Query<VisualsQuery>) -> ApiResult<Json<DashboardVisuals>> {
+    let start_month = query.start_month.unwrap_or_default();
     let revenue = sqlx::query_as::<_, DashboardRevenuePoint>(
         r#"
-        WITH months AS (
+        WITH bounds AS (
+            SELECT
+                date_trunc('month', CURRENT_DATE) - INTERVAL '11 months' AS min_month,
+                date_trunc('month', CURRENT_DATE) - INTERVAL '5 months' AS default_start,
+                date_trunc('month', CURRENT_DATE) - INTERVAL '5 months' AS max_start
+        ),
+        selected_range AS (
+            SELECT LEAST(
+                GREATEST(
+                    CASE
+                        WHEN $1 = '' THEN bounds.default_start
+                        ELSE date_trunc('month', to_date($1 || '-01', 'YYYY-MM-DD'))
+                    END,
+                    bounds.min_month
+                ),
+                bounds.max_start
+            ) AS start_month
+            FROM bounds
+        ),
+        months AS (
             SELECT generate_series(
-                date_trunc('month', CURRENT_DATE) - INTERVAL '5 months',
-                date_trunc('month', CURRENT_DATE),
+                selected_range.start_month,
+                selected_range.start_month + INTERVAL '5 months',
                 INTERVAL '1 month'
             ) AS month_start
+            FROM selected_range
         )
         SELECT to_char(months.month_start, 'MM/YYYY') AS label,
                COALESCE(SUM(h.thanhtien), 0)::float8 AS total
@@ -43,6 +70,7 @@ async fn visuals(State(state): State<AppState>) -> ApiResult<Json<DashboardVisua
         ORDER BY months.month_start
         "#,
     )
+    .bind(start_month)
     .fetch_all(&state.pool)
     .await?;
 

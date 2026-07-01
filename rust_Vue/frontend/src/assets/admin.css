@@ -656,6 +656,19 @@ tr:last-child td {
     border-bottom: 0;
 }
 
+.clickable-row {
+    cursor: pointer;
+}
+
+.clickable-row:hover {
+    background: #f8fafc;
+}
+
+.clickable-row:focus-visible {
+    outline: 3px solid rgba(37, 99, 235, .22);
+    outline-offset: -3px;
+}
+
 .product-name {
     font-weight: 700;
     max-width: 360px;
@@ -701,6 +714,46 @@ tr:last-child td {
 .badge.locked {
     background: #fff1f2;
     color: #be123c
+}
+
+.badge.order-status {
+    border: 1px solid transparent;
+}
+
+.badge.status-pending {
+    background: #fffbeb;
+    border-color: #fde68a;
+    color: #92400e;
+}
+
+.badge.status-processing {
+    background: #eef2ff;
+    border-color: #c7d2fe;
+    color: #3730a3;
+}
+
+.badge.status-shipping {
+    background: #eff6ff;
+    border-color: #bfdbfe;
+    color: #1d4ed8;
+}
+
+.badge.status-done {
+    background: #ecfdf5;
+    border-color: #a7f3d0;
+    color: #047857;
+}
+
+.badge.status-cancelled {
+    background: #fff1f2;
+    border-color: #fecdd3;
+    color: #be123c;
+}
+
+.badge.status-empty {
+    background: #f3f4f6;
+    border-color: #e5e7eb;
+    color: #4b5563;
 }
 
 .actions {
@@ -855,6 +908,31 @@ tr:last-child td {
     background: #eff6ff;
 }
 
+.status-option.status-pending {
+    border-color: #fde68a;
+    background: #fffbeb;
+}
+
+.status-option.status-processing {
+    border-color: #c7d2fe;
+    background: #eef2ff;
+}
+
+.status-option.status-shipping {
+    border-color: #bfdbfe;
+    background: #eff6ff;
+}
+
+.status-option.status-done {
+    border-color: #a7f3d0;
+    background: #ecfdf5;
+}
+
+.status-option.status-cancelled {
+    border-color: #fecdd3;
+    background: #fff1f2;
+}
+
 .status-option.active {
     border-color: #2563eb;
     color: #1d4ed8;
@@ -939,6 +1017,36 @@ tr:last-child td {
     border-radius: 50%;
     background: #2563eb;
     box-shadow: 0 0 0 4px #dbeafe;
+}
+
+.history-dot.status-pending {
+    background: #f59e0b;
+    box-shadow: 0 0 0 4px #fef3c7;
+}
+
+.history-dot.status-processing {
+    background: #6366f1;
+    box-shadow: 0 0 0 4px #e0e7ff;
+}
+
+.history-dot.status-shipping {
+    background: #2563eb;
+    box-shadow: 0 0 0 4px #dbeafe;
+}
+
+.history-dot.status-done {
+    background: #059669;
+    box-shadow: 0 0 0 4px #d1fae5;
+}
+
+.history-dot.status-cancelled {
+    background: #e11d48;
+    box-shadow: 0 0 0 4px #ffe4e6;
+}
+
+.history-dot.status-empty {
+    background: #6b7280;
+    box-shadow: 0 0 0 4px #e5e7eb;
 }
 
 .status-history div {
@@ -1271,6 +1379,24 @@ tr:last-child td {
 .panel-heading small {
     color: #b2b7bf;
     font-size: 9px
+}
+
+.panel-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.compact-select {
+    min-height: 28px;
+    padding: 4px 28px 4px 9px;
+    border-radius: 5px;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.revenue-window-select {
+    min-width: 150px;
 }
 
 .outline-link {
@@ -1987,7 +2113,7 @@ html.dark .notification-trigger b {
 
 .bar-chart {
     display: grid;
-    grid-template-columns: repeat(6, minmax(0, 1fr));
+    grid-template-columns: repeat(var(--revenue-columns, 6), minmax(0, 1fr));
     align-items: end;
     gap: 12px;
     height: 250px;

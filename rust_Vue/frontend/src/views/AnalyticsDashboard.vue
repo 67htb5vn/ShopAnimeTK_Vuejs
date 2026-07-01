@@ -22,10 +22,15 @@
     <div class="analytics-grid">
       <section class="analytics-panel chart-panel">
         <div class="panel-heading">
-          <div><span>Doanh thu 6 tháng</span><small>Biểu đồ lấy từ dữ liệu hóa đơn</small></div>
-          <RouterLink class="outline-link" to="/orders">Chi tiết</RouterLink>
+          <div><span>Doanh thu 6 tháng</span><small>{{ selectedRevenueWindowLabel }}</small></div>
+          <div class="panel-actions">
+            <select v-model="revenueStartMonth" class="compact-select revenue-window-select" @change="loadDashboard">
+              <option v-for="option in revenueWindowOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
+            </select>
+            <RouterLink class="outline-link" to="/orders">Chi tiết</RouterLink>
+          </div>
         </div>
-        <div class="bar-chart" role="img" aria-label="Doanh thu 6 tháng gần nhất">
+        <div class="bar-chart" :style="{ '--revenue-columns': chartRevenue.length }" role="img" :aria-label="`Doanh thu ${selectedRevenueWindowLabel}`">
           <article v-for="point in chartRevenue" :key="point.label">
             <strong>{{ compactMoney(point.total) }}</strong>
             <span :style="{ height: `${barHeight(point.total)}%` }"></span>
@@ -93,9 +98,13 @@ import { api, formatDate } from '../api/http'
 const stats = reactive({ total_products: 0, total_users: 0, total_orders: 0, total_revenue: 0 })
 const visuals = reactive({ revenue: [], order_statuses: [], payment_methods: [], stock_summary: [], recent_orders: [] })
 const loadError = ref('')
+const revenueWindowOptions = buildRevenueWindowOptions()
+const savedRevenueStart = localStorage.getItem('dashboard_revenue_start_month')
+const revenueStartMonth = ref(revenueWindowOptions.some(option => option.value === savedRevenueStart) ? savedRevenueStart : revenueWindowOptions.at(-1)?.value)
 const formatNumber = value => Number(value || 0).toLocaleString('vi-VN')
 const compactMoney = value => new Intl.NumberFormat('vi-VN', { notation: 'compact', style: 'currency', currency: 'VND', maximumFractionDigits: 1 }).format(Number(value || 0))
 const chartRevenue = computed(() => visuals.revenue.length ? visuals.revenue : defaultRevenue())
+const selectedRevenueWindowLabel = computed(() => revenueWindowOptions.find(option => option.value === revenueStartMonth.value)?.label || '6 tháng gần nhất')
 const statusItems = computed(() => visuals.order_statuses.length ? visuals.order_statuses : [
   { label: 'Chờ xử lý', value: 0 },
   { label: 'Đang giao', value: 0 },
@@ -113,9 +122,15 @@ const stockAvailablePercent = computed(() => slicePercent(stockItems.value[0]?.v
 const barHeight = value => Math.max(8, Math.round(Number(value || 0) / maxRevenue.value * 100))
 const slicePercent = (value, total) => total ? Math.round(Number(value || 0) / total * 100) : 0
 
-onMounted(async () => {
+onMounted(loadDashboard)
+
+async function loadDashboard() {
+  localStorage.setItem('dashboard_revenue_start_month', revenueStartMonth.value)
   loadError.value = ''
-  const [statsResult, visualsResult] = await Promise.allSettled([api.get('/dashboard/stats'), api.get('/dashboard/visuals')])
+  const [statsResult, visualsResult] = await Promise.allSettled([
+    api.get('/dashboard/stats'),
+    api.get('/dashboard/visuals', { params: { start_month: revenueStartMonth.value } })
+  ])
   if (statsResult.status === 'fulfilled') Object.assign(stats, statsResult.value.data)
   if (visualsResult.status === 'fulfilled') {
     Object.assign(visuals, normalizeVisuals(visualsResult.value.data))
@@ -123,15 +138,47 @@ onMounted(async () => {
     await loadFallbackVisuals()
     loadError.value = 'Backend chưa trả dữ liệu trực quan mới. Đang hiển thị dữ liệu dự phòng từ danh sách hiện có.'
   }
-})
+}
 
 function defaultRevenue() {
   const formatter = new Intl.DateTimeFormat('vi-VN', { month: '2-digit', year: 'numeric' })
+  const start = parseMonthValue(revenueStartMonth.value) || revenueWindowOptions.at(-1)?.start || monthStart(new Date())
   return Array.from({ length: 6 }, (_, index) => {
-    const date = new Date()
-    date.setMonth(date.getMonth() - (5 - index))
+    const date = new Date(start)
+    date.setMonth(start.getMonth() + index)
     return { label: formatter.format(date), total: 0 }
   })
+}
+
+function buildRevenueWindowOptions() {
+  const formatter = new Intl.DateTimeFormat('vi-VN', { month: '2-digit', year: 'numeric' })
+  const firstStart = monthStart(new Date())
+  firstStart.setMonth(firstStart.getMonth() - 11)
+  return Array.from({ length: 7 }, (_, index) => {
+    const start = new Date(firstStart)
+    start.setMonth(firstStart.getMonth() + index)
+    const end = new Date(start)
+    end.setMonth(start.getMonth() + 5)
+    return {
+      value: monthValue(start),
+      label: `${formatter.format(start)} - ${formatter.format(end)}`,
+      start
+    }
+  })
+}
+
+function monthStart(date) {
+  return new Date(date.getFullYear(), date.getMonth(), 1)
+}
+
+function monthValue(date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+}
+
+function parseMonthValue(value) {
+  if (!/^\d{4}-\d{2}$/.test(String(value || ''))) return null
+  const [year, month] = value.split('-').map(Number)
+  return new Date(year, month - 1, 1)
 }
 
 function normalizeVisuals(data = {}) {

@@ -2,7 +2,7 @@
   <div class="admin-shell">
     <aside class="sidebar">
       <div class="brand">
-        <div class="brand-logo">SA</div>
+        <div class="brand-logo">TK</div>
         <div>
           <strong>Shop Anime</strong>
         </div>
@@ -22,10 +22,7 @@
           <h1>{{ title }}</h1>
           <p>{{ todayLabel }}</p>
         </div>
-        <div class="topbar-tools">
-          <RouterLink class="topbar-shortcut" to="/orders">Hóa đơn</RouterLink>
-          <RouterLink class="topbar-shortcut" to="/products">Sản phẩm</RouterLink>
-        </div>
+
         <div ref="topbarAccount" class="topbar-account">
           <button class="topbar-icon notification-trigger" type="button" aria-label="Thông báo đơn hàng"
             @click="toggleNotifications">
@@ -110,6 +107,10 @@ async function loadOrderNotifications(initial = false) {
     const orders = data.items || []
     const newOrders = initial ? [] : orders.filter(order => !knownOrderIds.value.has(order.mahd))
     recentOrders.value = orders
+    if (initial) {
+      seenOrderIds.value = new Set([...seenOrderIds.value, ...orders.map(order => order.mahd)])
+      saveSeenOrders()
+    }
     knownOrderIds.value = new Set([...knownOrderIds.value, ...orders.map(order => order.mahd)].slice(-30))
     localStorage.setItem('known_order_ids', JSON.stringify([...knownOrderIds.value]))
     if (newOrders.length) notify(`Có ${newOrders.length} đơn hàng mới cần xử lý.`, 'info')
@@ -167,7 +168,6 @@ const menu = [
   { path: '/animes', label: 'Anime', icon: '🎬' },
   { path: '/orders', label: 'Hóa đơn', icon: '🧾' },
   { path: '/users', label: 'Người dùng', icon: '👤' },
-  { path: '/promotions', label: 'Khuyến mãi', icon: '🏷️' },
-  { path: '/tags', label: 'Tag', icon: '🔖' }
+  { path: '/promotions', label: 'Khuyến mãi', icon: '🏷️' }
 ]
 </script>

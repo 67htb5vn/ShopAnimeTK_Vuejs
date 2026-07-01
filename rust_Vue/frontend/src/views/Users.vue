@@ -135,11 +135,24 @@ function open(u) {
 }
 async function save() {
   if (!editing.value) return
-  const payload = { ...editing.value, trangthai: form.trangthai }
-  await api.put(`/users/${editing.value.mand}`, payload)
-  show.value = false
-  await load()
-  notify('Đã cập nhật trạng thái người dùng.')
+  const payload = {
+    ten: form.ten || '',
+    ngaysinh: form.ngaysinh || null,
+    taikhoan: form.taikhoan || '',
+    email: form.email || null,
+    phanquyen: form.phanquyen || '0',
+    trangthai: form.trangthai
+  }
+  try {
+    const userId = String(editing.value.mand || '').trim()
+    const { data } = await api.put(`/users/${encodeURIComponent(userId)}`, payload)
+    Object.assign(editing.value, data)
+    show.value = false
+    await load()
+    notify('Đã cập nhật trạng thái người dùng.')
+  } catch (err) {
+    notify(err.response?.data?.message || 'Không thể cập nhật trạng thái người dùng.', 'error')
+  }
 }
 onMounted(load)
 </script>
