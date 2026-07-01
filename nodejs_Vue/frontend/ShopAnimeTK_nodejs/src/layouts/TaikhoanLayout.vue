@@ -23,12 +23,22 @@
     object-fit: contain !important;
     display: block;
 }
+
+.widget-dashboard .nav-link.account-active {
+    color: #08c !important;
+    font-weight: 700;
+    background: #f4f9fc;
+    border-left: 3px solid #08c;
+    padding-left: 12px;
+}
 </style>
 
 <script setup lang="ts">
 import DanhmuchangMenu from '@/components/Danhmuchang/DanhmuchangMenu.vue';
 import HoathinhMenu from '@/components/Hoathinh/HoathinhMenu.vue';
 import HoathinhSearch from '@/components/Hoathinh/HoathinhSearch.vue';
+import XemnhanhGiohang from '@/components/Giohang/XemnhanhGiohang.vue';
+import { useGiohangStore } from '@/stores/XemnhanhGiohang';
 import { usePortoScripts } from '@/composable/usePortoScripts'
 
 const myShopScripts = [
@@ -44,12 +54,14 @@ usePortoScripts(myShopScripts)
 
 import { ref, onMounted } from 'vue'
 import axios from 'axios'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import type { nguoidung } from '@/models/nguoidung';
 
 const isLoggedIn = ref(false)
 const user = ref<nguoidung | null>(null)
 const router = useRouter()
+const route = useRoute()
+const giohangStore = useGiohangStore()
 const mahh = ref('')
 const search = ref('')
 
@@ -109,10 +121,10 @@ onMounted(async () => {
                                     <li><router-link to="/Taikhoan">
                                             Tài khoản
                                         </router-link></li>
-                                    <li><router-link to="/Lichsudonhang">
+                                    <li><router-link to="/Taikhoan/Donhang">
                                             Lịch sử đơn hàng
                                         </router-link></li>
-                                    <li><router-link to="/Taikhoan">
+                                    <li><router-link to="/Giohang">
                                             Giỏ hàng
                                         </router-link></li>
                                 </ul>
@@ -177,7 +189,7 @@ onMounted(async () => {
                                     data-display="static">
                                     <i class="minicart-icon"></i>
                                     <span class="cart-count badge-circle">
-                                        @await Component.InvokeAsync("Soluong")
+                                        {{ giohangStore.tongSoLuong }}
                                     </span>
                                 </a>
 
@@ -189,14 +201,14 @@ onMounted(async () => {
                                     <div class="dropdownmenu-wrapper custom-scrollbar">
                                         <div class="dropdown-cart-header">Giỏ hàng</div>
                                         <!-- End .dropdown-cart-header -->
-                                        @await Component.InvokeAsync("Giohang")
+                                        <XemnhanhGiohang />
                                         <!-- End .dropdown-cart-total -->
 
 
                                         <div class="dropdown-cart-action">
-                                            <a :href="`/Giohang`" class="btn btn-dark btn-block">
+                                            <router-link to="/Giohang" class="btn btn-dark btn-block">
                                                 Thanh toán
-                                            </a>
+                                            </router-link>
                                         </div>
                                         <!-- End .dropdown-cart-total -->
                                     </div>
@@ -283,14 +295,14 @@ onMounted(async () => {
                         <h2 class="text-uppercase">Tài khoản của tôi</h2>
                         <ul class="nav nav-tabs list flex-column mb-0" role="tablist">
                             <li class="nav-item">
-                                <router-link to="/Taikhoan" class="nav-link" id="edit-tab" aria-controls="edit"
+                                <router-link to="/Taikhoan" class="nav-link" :class="{ 'account-active': route.name === 'Taikhoan' }" id="edit-tab" aria-controls="edit"
                                     aria-selected="false" style="text-transform:none;">
                                     Thông tin tài khoản
                                 </router-link>
                             </li>
 
                             <li class="nav-item">
-                                <router-link to="/Lichsudonhang" class="nav-link" id="order-tab" aria-controls="order"
+                                <router-link to="/Taikhoan/Donhang" class="nav-link" :class="{ 'account-active': String(route.name || '').startsWith('Hoadon') }" id="order-tab" aria-controls="order"
                                     aria-selected="true" style="text-transform:none;">
                                     Đơn hàng của tôi
                                 </router-link>

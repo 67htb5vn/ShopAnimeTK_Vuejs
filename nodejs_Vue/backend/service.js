@@ -29,21 +29,40 @@ const getAllHoathinh = async () => {
     return result.rows;
 };
 
+const getAllKhuyenmai = async () => {
+    const result = await pool.query('SELECT * FROM public.khuyenmai');
+    return result.rows;
+};
+
 const getSanphamNoibat = async () => {
     const result = await pool.query(`
-        SELECT DISTINCT ON (sp.madmh) 
-                sp.*, 
+        SELECT DISTINCT ON (TRIM(sp.madmh))
+                sp.*,
+                dmh.tendmh,
+                COALESCE(dg.diemtrungbinh, 0) AS diemtrungbinh,
+                COALESCE(dg.sodanhgia, 0)::integer AS sodanhgia,
                 (
-                    SELECT JSON_AGG(anh) 
+                    SELECT COALESCE(JSON_AGG(anh), '[]'::json)
                     FROM (
-                        SELECT maha, duongdan, masp, anhdaidien 
-                        FROM public.hinhanhsp 
-                        WHERE masp = sp.masp 
+                        SELECT maha, duongdan, masp, anhdaidien
+                        FROM public.hinhanhsp
+                        WHERE TRIM(masp) = TRIM(sp.masp)
+                          AND NULLIF(TRIM(duongdan), '') IS NOT NULL
+                        ORDER BY
+                            CASE WHEN anhdaidien = 1 THEN 0 WHEN anhdaidien = 2 THEN 1 ELSE 2 END,
+                            maha
                     ) anh
                 ) as hinhanhsps
-            FROM public.sanpham sp
-            WHERE sp.madmh NOT IN ('DMH002', 'DMH003') 
-            ORDER BY sp.madmh, sp.masp ASC;`);
+        FROM public.sanpham sp
+        LEFT JOIN public.danhmuchang dmh ON TRIM(dmh.madmh) = TRIM(sp.madmh)
+        LEFT JOIN (
+            SELECT TRIM(masp) AS masp, AVG(sao) AS diemtrungbinh, COUNT(*) AS sodanhgia
+            FROM public.danhgia
+            GROUP BY TRIM(masp)
+        ) dg ON dg.masp = TRIM(sp.masp)
+        WHERE TRIM(sp.madmh) NOT IN ('DMH002', 'DMH003')
+        ORDER BY TRIM(sp.madmh), TRIM(sp.masp) ASC;
+    `);
     return result.rows;
 };
 
@@ -299,4 +318,5 @@ const getStudentsByID = async ({ id }) => {
 }
 
 module.exports = { getAllDanhmuchang, getAllHoathinh, getSanphamNoibat, getAllSanphamDmh, getAllSanphamHh, getAllSanphamSearchHh, 
-                    getAllSanphamChitiet, getDangnhap, getPagination, updateStudents, insertStudents, deleteStudents, getStudentsByID }
+                    getAllSanphamChitiet, getDangnhap, getPagination, updateStudents, insertStudents, deleteStudents, getStudentsByID,
+                    getAllKhuyenmai }

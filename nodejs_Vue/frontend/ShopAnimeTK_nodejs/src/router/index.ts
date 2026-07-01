@@ -9,7 +9,12 @@ import DetailSanpham from '@/views/DetailSanpham.vue'
 import Dangnhap from '@/views/Dangnhap.vue'
 import Taikhoan from '@/views/Taikhoan.vue'
 import TaikhoanLayout from '@/layouts/TaikhoanLayout.vue'
-import Lichsudonhang from '@/views/Lichsudonhang.vue'
+import Hoadon from '@/views/Hoadon.vue'
+import Chitiethoadon from '@/components/Hoadon/Chitiethoadon.vue'
+import Huydonhang from '@/components/Hoadon/Huydonhang.vue'
+import Giohang from '@/views/Giohang.vue'
+import Thanhtoan from '@/views/Thanhtoan.vue'
+import Dathangthanhcong from '@/views/Dathangthanhcong.vue'
 
 const routes = [
     {
@@ -39,6 +44,21 @@ const routes = [
                 path: 'chitiet/:slug',
                 name: 'chitiet',
                 component: DetailSanpham
+            },
+            {
+                path: 'Giohang',
+                name: 'Giohang',
+                component: Giohang
+            },
+            {
+                path: 'Thanhtoan',
+                name: 'Thanhtoan',
+                component: Thanhtoan
+            },
+            {
+                path: 'Dathangthanhcong/:mahd',
+                name: 'Dathangthanhcong',
+                component: Dathangthanhcong
             }
         ],
     },
@@ -52,13 +72,29 @@ const routes = [
         children: [
             {
                 path: '',
+                name: 'Taikhoan',
                 component: Taikhoan
+            },
+            {
+                path: 'Donhang',
+                name: 'Hoadon',
+                component: Hoadon
+            },
+            {
+                path: 'Donhang/:mahd/Huy',
+                name: 'HoadonCancel',
+                component: Huydonhang
+            },
+            {
+                path: 'Donhang/:mahd',
+                name: 'HoadonDetail',
+                component: Chitiethoadon
             }
         ]
     },
     {
         path: '/Lichsudonhang',
-        component: Lichsudonhang
+        redirect: '/Taikhoan/Donhang'
     },
     {
         path: '/HomeUser',
@@ -83,6 +119,16 @@ const routes = [
                 path: 'search',
                 name: 'searchHomeUser',
                 component: SearchSanpham
+            },
+                        {
+                path: 'Giohang',
+                name: 'GiohangHomeUser',
+                component: Giohang
+            },
+            {
+                path: 'Thanhtoan',
+                name: 'ThanhtoanHomeUser',
+                component: Thanhtoan
             }
         ]
     }
@@ -90,8 +136,10 @@ const routes = [
 
 const router = createRouter({
     history: createWebHistory(),
-    routes
+    routes,
+    scrollBehavior() {
+        return { left: 0, top: 0, behavior: 'auto' }
+    }
 })
 
 export default router
-

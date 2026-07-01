@@ -15,6 +15,12 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url))
     },
   },
+  css: {
+    lightningcss: {
+      // Porto còn một số CSS hack cho Internet Explorer cũ.
+      errorRecovery: true,
+    },
+  },
   server: {
     proxy: {
       '/api': {

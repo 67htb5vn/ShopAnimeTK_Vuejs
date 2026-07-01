@@ -87,11 +87,13 @@ nav a:first-of-type {
 
 <script setup lang="ts">
 import { RouterView } from 'vue-router'
+import Chatbox from '@/components/Chatbox/Chatbox.vue'
 </script>
 
 <template>
   <!-- RouterView này sẽ đóng vai trò nạp 'Layout' của bạn vào -->
   <RouterView :key="$route.fullPath" />
+  <Chatbox />
 </template>
 
 <style>
