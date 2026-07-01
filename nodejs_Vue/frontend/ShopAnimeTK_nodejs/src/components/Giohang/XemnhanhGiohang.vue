@@ -1,14 +1,17 @@
 <script setup lang="ts">
-import { ref, onMounted, watch, computed } from 'vue';
+import { ref, onMounted, onBeforeUnmount, watch } from 'vue';
 import axios from 'axios';
-import { RouterLink, useRoute, useRouter } from 'vue-router';
-import type { sanpham } from '@/models/sanpham';
+import { useRoute } from 'vue-router';
 import type { sanphamgiohang } from '@/models/sanphamgiohang';
 import { useGiohangStore } from '@/stores/XemnhanhGiohang'
+import { normalizeProductImagePath, productPlaceholderImage, handleProductImageError } from '@/utils/productImage'
 
 const giohangStore = useGiohangStore()
+const route = useRoute()
 const isLoggedIn = ref(false)
 const Xoasp = ref<sanphamgiohang>()
+
+const cartImage = (path?: string) => normalizeProductImagePath(path) || productPlaceholderImage
 
 const formatCurrency = (value: number | undefined) => {
     if (!value) return '0';
@@ -38,6 +41,19 @@ const xoaSp = async (masp: string) => {
     await giohangStore.xoaGiohang(masp)
 }
 
+const closeQuickCart = () => {
+    document.body.classList.remove('cart-opened')
+    document.querySelectorAll('.cart-dropdown.show, .cart-dropdown .dropdown-menu.show').forEach(element => {
+        element.classList.remove('show')
+    })
+    document.querySelectorAll('.cart-dropdown .cart-toggle[aria-expanded="true"]').forEach(element => {
+        element.setAttribute('aria-expanded', 'false')
+    })
+}
+
+watch(() => route.fullPath, closeQuickCart)
+onBeforeUnmount(closeQuickCart)
+
 onMounted(() => {
     loadGiohang()
 });
@@ -64,7 +80,8 @@ onMounted(() => {
                         <figure class="product-image-container">
                             <router-link :to="`/chitiet/${spgh.tensp?.toLowerCase()}_${spgh.masp}`"
                                 class="product-image">
-                                <!-- <img :src="`${spgh.duongdan}`" alt="product" width="80" height="80"> -->
+                                <img :src="cartImage(spgh.duongdan)" :alt="spgh.tensp || 'Sản phẩm'" width="80"
+                                    height="80" @error="handleProductImageError">
                             </router-link>
 
                             <a href="javascript:;" class="btn-remove" title="Xóa sản phẩm"

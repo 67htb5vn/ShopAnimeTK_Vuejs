@@ -102,6 +102,84 @@
     appearance: none;
 }
 
+/* Fallback cho SPA: vẫn hiện ảnh chính nếu Owl Carousel chưa kịp khởi tạo sau khi API trả dữ liệu. */
+.product-single-carousel:not(.owl-loaded) {
+    display: block !important;
+}
+
+.product-single-carousel:not(.owl-loaded)>div:not(:first-child) {
+    display: none;
+}
+
+.products-slider:not(.owl-loaded) {
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 2rem;
+}
+
+@media (max-width: 991px) {
+    .products-slider:not(.owl-loaded) {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 767px) {
+    .products-slider:not(.owl-loaded) {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+.product-action {
+    display: flex !important;
+    align-items: center !important;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.product-action>div,
+.product-action .product-single-qty {
+    display: flex;
+    align-items: center;
+    margin: 0 !important;
+}
+
+.product-action .quantity-wrapper,
+.product-action .qty-btn,
+.product-action .qty-input,
+.product-action .add-cart,
+.product-action .nolog {
+    height: 48px !important;
+    min-height: 48px !important;
+    box-sizing: border-box !important;
+}
+
+.product-action .add-cart,
+.product-action .nolog {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    margin: 0 !important;
+    padding: 0 2.5rem !important;
+    line-height: 1 !important;
+}
+
+.product-action .qty-btn {
+    font-size: 0;
+}
+
+.product-action .qty-btn::before {
+    font-size: 1.7rem;
+    line-height: 1;
+}
+
+.product-action .qty-btn:first-child::before {
+    content: "−";
+}
+
+.product-action .qty-btn:last-child::before {
+    content: "+";
+}
+
 .cart-message {
     display: flex;
     align-items: center;
@@ -136,13 +214,21 @@
 </style>
 
 <script setup lang="ts">
-import { ref, onMounted, watch, computed } from 'vue';
+import { ref, onMounted, watch, computed, nextTick } from 'vue';
 import axios from 'axios';
 import { RouterLink, useRoute, useRouter } from 'vue-router';
 import type { sanpham } from '@/models/sanpham';
 import noUiSlider from 'nouislider';
 import 'nouislider/dist/nouislider.css';
 import { useGiohangStore } from '@/stores/XemnhanhGiohang'
+import Danhgia from '@/components/Danhgia/Danhgia.vue'
+import DetailSanphamLienquan from '@/components/Sanpham/DetailSanphamLienquan.vue'
+import DetailSanphamNoibat from '@/components/Sanpham/DetailSanphamNoibat.vue'
+import DetailSanphamMuanhieu from '@/components/Sanpham/DetailSanphamMuanhieu.vue'
+import DetailSanphamDanhgiacao from '@/components/Sanpham/DetailSanphamDanhgiacao.vue'
+import DetailSanphamMoiramat from '@/components/Sanpham/DetailSanphamMoiramat.vue'
+import type { DetailProduct } from '@/models/detailProduct'
+import { getProductImagePaths, handleProductImageError } from '@/utils/productImage'
 
 const giohangStore = useGiohangStore()
 
@@ -168,17 +254,68 @@ const masp = slug.split('_').pop()
 const quantity = ref<number>(1)
 const isLoggedIn = ref(false)
 const isOverload = ref(false)
+const reviewCount = ref(0)
+const averageRating = ref(0)
+const activeTab = ref<'description' | 'reviews'>('description')
+const relatedSlider = ref<HTMLElement | null>(null)
+const productGroups = ref({
+    related: [] as DetailProduct[],
+    featured: [] as DetailProduct[],
+    bestSelling: [] as DetailProduct[],
+    newest: [] as DetailProduct[],
+    topRated: [] as DetailProduct[]
+})
+
+const initializeRelatedSlider = async (attempt = 0) => {
+    await nextTick()
+    const jquery = (window as any).jQuery
+    if (!relatedSlider.value || !jquery?.fn?.owlCarousel) {
+        if (attempt < 10) window.setTimeout(() => initializeRelatedSlider(attempt + 1), 150)
+        return
+    }
+
+    const slider = jquery(relatedSlider.value)
+    if (slider.hasClass('owl-loaded')) return
+    slider.owlCarousel({
+        items: 4,
+        margin: 20,
+        nav: true,
+        dots: true,
+        loop: productGroups.value.related.length > 4,
+        responsive: {
+            0: { items: 2 },
+            768: { items: 3 },
+            992: { items: 4 }
+        }
+    })
+}
+
+const loadProductGroups = async () => {
+    if (!masp) return
+    try {
+        const response = await axios.get(`/api/detail-product-groups/${masp}`)
+        productGroups.value = response.data
+        await initializeRelatedSlider()
+    } catch (error) {
+        console.error('Không thể tải các nhóm sản phẩm:', error)
+    }
+}
+
+const updateReviewSummary = (summary: { count: number; average: number }) => {
+    reviewCount.value = summary.count
+    averageRating.value = summary.average
+}
 
 const getAnhByLoai = (sp: SanPhamVoiChiTiet, loai: number) => {
-    if (!sp.hinhanhsps) return 'https://via.placeholder.com/160';
-
-    const anh = sp.hinhanhsps.find(x => Number(x.anhdaidien) === loai);
-
-    if (anh && anh.duongdan) {
-        let path = anh.duongdan;
-        return path;
-    }
+    const images = getProductImagePaths(sp)
+    return loai === 2 ? images.hover : images.main
 };
+
+const productImages = computed(() => {
+    if (!sp.value) return []
+    const images = getProductImagePaths(sp.value)
+    return images.all.length ? images.all : [images.main]
+})
 
 const formatCurrency = (value: number | undefined) => {
     if (!value) return '0';
@@ -196,11 +333,15 @@ const decreaseQty = () => {
 }
 
 const checkOverload = () => {
-    if (quantity.value > (sp.value?.soluong || 0)) {
-        isOverload.value = true
-    } else {
-        isOverload.value = false
-    }
+    const stock = Number(sp.value?.soluong || 0)
+    const remaining = masp ? giohangStore.getConlai(stock, masp) : stock
+    isOverload.value = quantity.value > remaining
+}
+
+const showCartMessage = () => {
+    const cartMessage = document.querySelector('.cart-message')
+    cartMessage?.classList.remove('invisible')
+    setTimeout(() => cartMessage?.classList.add('invisible'), 3000)
 }
 
 const loadSanphamChitiet = async () => {
@@ -210,6 +351,7 @@ const loadSanphamChitiet = async () => {
         })
 
         isLoggedIn.value = res.data.loggedIn
+        if (isLoggedIn.value) void giohangStore.loadGiohang()
 
         const response = await axios.get('/api/loadSanphamChitiet', {
             params: {
@@ -223,12 +365,13 @@ const loadSanphamChitiet = async () => {
         lines.value = sp.value?.thongtin
             ?.split(/\r\n|\r|\n/)
             .filter(x => x.trim() !== '') || [];
+        void loadProductGroups()
     } catch (error) {
         console.error("Lỗi:", error);
     }
 };
 
-const addGiohang = async () => {
+const addGiohangLegacy = async () => {
     try {
         checkOverload();
         if (isOverload.value == false) {
@@ -262,6 +405,39 @@ const addGiohang = async () => {
         }, 3000)
 
     } catch (error) {
+        console.error(error)
+    }
+}
+
+const addGiohang = async () => {
+    checkOverload()
+    if (isOverload.value) {
+        showCartMessage()
+        return
+    }
+
+    try {
+        await axios.post('/api/addGiohang', {
+            MaSp: masp,
+            Quanity: quantity.value
+        }, { withCredentials: true })
+
+        giohangStore.addLocal({
+            masp: sp.value?.masp,
+            tensp: sp.value?.tensp,
+            gia: sp.value?.gia,
+            soluong: quantity.value,
+            thanhtien: (sp.value?.gia || 0) * quantity.value,
+            duongdan: getAnhByLoai(sp.value!, 1)
+        })
+        isOverload.value = false
+        showCartMessage()
+    } catch (error: any) {
+        if (error.response?.status === 409) {
+            isOverload.value = true
+            showCartMessage()
+            return
+        }
         console.error(error)
     }
 }
@@ -353,11 +529,11 @@ watch(
                             </div>
 
                             <div class="product-single-carousel owl-carousel owl-theme show-nav-hover">
-                                <div v-for="image in sp?.hinhanhsps">
+                                <div v-for="(image, index) in productImages" :key="`${image}-${index}`">
                                     <div class="product-item">
-                                        <img class="product-single-image" :src="`${image.duongdan}`"
-                                            :data-zoom-image="`${image.duongdan}`" width="468" height="468"
-                                            alt="product" />
+                                        <img class="product-single-image" :src="image" :data-zoom-image="image"
+                                            width="468" height="468" :alt="sp?.tensp || 'Sản phẩm'"
+                                            @error="handleProductImageError" />
                                     </div>
                                 </div>
                             </div>
@@ -368,11 +544,11 @@ watch(
                         </div>
 
                         <div class="prod-thumbnail owl-dots">
-                            <div v-for="image in sp?.hinhanhsps">
+                            <div v-for="(image, index) in productImages" :key="`thumb-${image}-${index}`">
                                 <div class="owl-dot">
-                                    <img class="product-single-image" :src="`${image.duongdan}`"
-                                        :data-zoom-image="`${image.duongdan}`" width="110" height="110"
-                                        alt="product-thumbnail" />
+                                    <img class="product-single-image" :src="image" :data-zoom-image="image" width="110"
+                                        height="110" :alt="`${sp?.tensp || 'Sản phẩm'} - ảnh ${index + 1}`"
+                                        @error="handleProductImageError" />
                                 </div>
                             </div>
                             <!-- @foreach (var image in Model.Hinhanhsps)
@@ -422,16 +598,19 @@ watch(
                             </div>
                         </div>
 
-                        <!-- <div class="ratings-container">
+                        <div class="ratings-container">
                             <div class="product-ratings">
-                                <span class="ratings" :style="{ width: (sp?.diemtrungbinh || 0) * 20 + '%' }"></span>
+                                <span class="ratings" :style="{ width: averageRating * 20 + '%' }"></span>
 
                                 <span class="tooltiptext tooltip-top"></span>
                             </div>
 
 
-                            <a href="#" class="rating-link">( @ViewBag.SoDG Đánh giá )</a>
-                        </div> -->
+                            <a href="#product-reviews-content" class="rating-link"
+                                @click.prevent="activeTab = 'reviews'">
+                                ( {{ reviewCount }} Đánh giá )
+                            </a>
+                        </div>
 
                         <hr class="short-divider">
 
@@ -458,7 +637,7 @@ watch(
                                 Danh mục hàng:
                                 <strong>
                                     <a :href="`/Danhmuchang?MaDmh=${sp?.madmh}`" class="product-category">{{ sp?.tendmh
-                                    }}</a>
+                                        }}</a>
                                 </strong>
                             </li>
 
@@ -466,7 +645,7 @@ watch(
                                 Hoạt hình:
                                 <strong>
                                     <a :href="`/Hoathinh?MaHh=${sp?.tenhh}`" class="product-category">{{ sp?.tenhh
-                                    }}</a>
+                                        }}</a>
                                 </strong>
                             </li>
                             <li>
@@ -531,19 +710,22 @@ watch(
             <div class="product-single-tabs">
                 <ul class="nav nav-tabs" role="tablist">
                     <li class="nav-item">
-                        <a class="nav-link active" id="product-tab-desc" data-toggle="tab" href="#product-desc-content"
-                            role="tab" aria-controls="product-desc-content" aria-selected="true">Thông tin sản phẩm</a>
+                        <a class="nav-link" :class="{ active: activeTab === 'description' }" id="product-tab-desc"
+                            href="#product-desc-content" role="tab" @click.prevent="activeTab = 'description'">Thông tin
+                            sản
+                            phẩm</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" id="product-tab-reviews" data-toggle="tab" href="#product-reviews-content"
-                            role="tab" aria-controls="product-reviews-content" aria-selected="false">Đánh giá
-                            (@ViewBag.SoDG) </a>
+                        <a class="nav-link" :class="{ active: activeTab === 'reviews' }" id="product-tab-reviews"
+                            href="#product-reviews-content" role="tab" @click.prevent="activeTab = 'reviews'">
+                            Đánh giá ({{ reviewCount }})
+                        </a>
                     </li>
                 </ul>
 
                 <div class="tab-content">
-                    <div class="tab-pane fade show active" id="product-desc-content" role="tabpanel"
-                        aria-labelledby="product-tab-desc">
+                    <div v-show="activeTab === 'description'" class="tab-pane fade show active"
+                        id="product-desc-content" role="tabpanel" aria-labelledby="product-tab-desc">
                         <div class="product-desc-content">
                             <p style="margin-bottom:15px;">
                                 Chào mừng bạn đến với thế giới mua sắm đa dạng dành cho fan Anime, nơi mỗi sản phẩm
@@ -562,18 +744,18 @@ watch(
                         </div>
                         <!-- End .product-desc-content -->
                     </div>
-                    <div class="tab-pane fade show" id="product-reviews-content" role="tabpanel"
-                        aria-labelledby="product-tab-reviews">
+                    <div v-show="activeTab === 'reviews'" class="tab-pane fade show active" id="product-reviews-content"
+                        role="tabpanel" aria-labelledby="product-tab-reviews">
                         <div class="product-reviews-content">
-                            <h3 class="reviews-title">Đánh giá cho @Model.TenSp</h3>
+                            <h3 class="reviews-title">Đánh giá cho {{ sp?.tensp }}</h3>
 
                             <div class="comment-list">
-                                @await Component.InvokeAsync("Danhgia", new { idSp = Model.MaSp })
+                                <Danhgia :masp="sp?.masp" @summary="updateReviewSummary" />
                             </div>
 
                             <div class="divider"></div>
 
-                            <div class="add-product-review">
+                            <div v-if="false" class="add-product-review">
                                 <form asp-action="Create" asp-controller="DanhgiaUser" method="post"
                                     class="comment-form m-0">
                                     <input type="hidden" name="MaSp" id="MaSp" value="@Model.MaSp" />
@@ -627,6 +809,34 @@ watch(
 
             <div class="products-section pt-0">
                 <h2 class="section-title">Sản phẩm liên quan</h2>
+                <div ref="relatedSlider" class="products-slider owl-carousel owl-theme dots-top dots-small">
+                    <DetailSanphamLienquan :products="productGroups.related" />
+                </div>
+            </div>
+
+            <hr class="mt-5 mb-5">
+
+            <section class="product-widgets-container row pb-2">
+                <div class="col-lg-3 col-sm-6 pb-5 pb-lg-0">
+                    <h4 class="section-sub-title">Nổi bật nhất</h4>
+                    <DetailSanphamNoibat :products="productGroups.featured" />
+                </div>
+                <div class="col-lg-3 col-sm-6 pb-5 pb-lg-0">
+                    <h4 class="section-sub-title">Được mua nhiều</h4>
+                    <DetailSanphamMuanhieu :products="productGroups.bestSelling" />
+                </div>
+                <div class="col-lg-3 col-sm-6 pb-5 pb-lg-0">
+                    <h4 class="section-sub-title">Mới ra mắt</h4>
+                    <DetailSanphamMoiramat :products="productGroups.newest" />
+                </div>
+                <div class="col-lg-3 col-sm-6 pb-5 pb-lg-0">
+                    <h4 class="section-sub-title">Đánh giá cao</h4>
+                    <DetailSanphamDanhgiacao :products="productGroups.topRated" />
+                </div>
+            </section>
+
+            <div v-if="false" class="products-section pt-0">
+                <h2 class="section-title">Sản phẩm liên quan</h2>
                 <div class="products-slider owl-carousel owl-theme dots-top dots-small">
                     @await Component.InvokeAsync("Sanpham", new { view = "Related", MaHh = @Model.MaHh })
                 </div>
@@ -638,7 +848,7 @@ watch(
 
 
 
-            <div class="product-widgets-container row pb-2">
+            <div v-if="false" class="product-widgets-container row pb-2">
                 <div class="col-lg-3 col-sm-6 pb-5 pb-md-0">
                     <h4 class="section-sub-title">Nổi bật nhất</h4>
                     @await Component.InvokeAsync("Sanpham", new { view = "Featured_Detail" })

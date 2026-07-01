@@ -24,6 +24,7 @@ import DanhmuchangMenu from '@/components/Danhmuchang/DanhmuchangMenu.vue';
 import HoathinhMenu from '@/components/Hoathinh/HoathinhMenu.vue';
 import HoathinhSearch from '@/components/Hoathinh/HoathinhSearch.vue';
 import XemnhanhGiohang from '@/components/Giohang/XemnhanhGiohang.vue';
+import { useGiohangStore } from '@/stores/XemnhanhGiohang';
 
 import { usePortoScripts } from '@/composable/usePortoScripts'
 
@@ -42,6 +43,7 @@ import axios from 'axios'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
+const giohangStore = useGiohangStore()
 
 const search = ref('')
 const mahh = ref('')
@@ -115,10 +117,10 @@ onMounted(async () => {
                                     <li><router-link to="/Taikhoan">
                                             Tài khoản
                                         </router-link></li>
-                                    <li><router-link to="/Lichsudonhang">
+                                    <li><router-link to="/Taikhoan/Donhang">
                                             Lịch sử đơn hàng
                                         </router-link></li>
-                                    <li><router-link to="/Taikhoan">
+                                    <li><router-link to="/Giohang">
                                             Giỏ hàng
                                         </router-link></li>
                                 </ul>
@@ -184,7 +186,7 @@ onMounted(async () => {
                                     data-display="static">
                                     <i class="minicart-icon"></i>
                                     <span class="cart-count badge-circle">
-                                        @await Component.InvokeAsync("Soluong")
+                                        {{ giohangStore.tongSoLuong }}
                                     </span>
                                 </a>
 
@@ -202,9 +204,9 @@ onMounted(async () => {
 
 
                                         <div class="dropdown-cart-action">
-                                            <a :href="`/Giohang`" class="btn btn-dark btn-block">
+                                            <router-link to="/Giohang" class="btn btn-dark btn-block">
                                                 Thanh toán
-                                            </a>
+                                            </router-link>
                                         </div>
                                         <!-- End .dropdown-cart-total -->
                                     </div>
@@ -225,7 +227,6 @@ onMounted(async () => {
                                     role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
                                     data-display="static">
                                     <i class="minicart-icon"></i>
-                                    <span class="cart-count badge-circle">3</span>
                                 </a>
 
                                 <div class="cart-overlay"></div>

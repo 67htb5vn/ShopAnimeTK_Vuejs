@@ -1,8 +1,6 @@
 import { defineStore } from 'pinia'
-import { ref, onMounted, watch, computed } from 'vue';
+import { ref, computed } from 'vue';
 import axios from 'axios';
-import { RouterLink, useRoute, useRouter } from 'vue-router';
-import type { sanpham } from '@/models/sanpham';
 import type { sanphamgiohang } from '@/models/sanphamgiohang';
 export const useGiohangStore = defineStore('giohang', () => {
 
@@ -30,21 +28,29 @@ export const useGiohangStore = defineStore('giohang', () => {
         }
     }
 
-    const tongSoLuong = computed(() =>
-        giohangs.value.reduce((s, x) => s + (x.soluong ?? 0), 0)
-    )
+    const tongSoLuong = computed(() => new Set(
+        giohangs.value
+            .map(item => String(item.masp || '').trim())
+            .filter(Boolean)
+    ).size)
 
     const xoaGiohang = async (masp: string) => {
-      try {
-          await axios.delete('/api/deleteGiohang', {
+          const res = await axios.delete('/api/deleteGiohang', {
              data: {masp},
               withCredentials: true
           })
-          giohangs.value = giohangs.value.filter(x => x.masp !== masp)
+          giohangs.value = res.data.giohang || res.data
+    }
 
-        } catch (error) {
-            console.error(error)
-        }
+    const updateSoluong = async (masp: string, soluong: number) => {
+        const res = await axios.put('/api/updateSoluong', {
+            masp,
+            soluong
+        }, {
+            withCredentials: true
+        })
+
+        giohangs.value = res.data.giohang || res.data
     }
 
     // số lượng còn lại trong kho
@@ -70,6 +76,7 @@ export const useGiohangStore = defineStore('giohang', () => {
         addLocal,
         tongSoLuong,
         xoaGiohang,
+        updateSoluong,
         getConlai
     }
 })

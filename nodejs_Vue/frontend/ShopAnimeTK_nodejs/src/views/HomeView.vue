@@ -2,6 +2,27 @@
 import TheWelcome from '../components/TheWelcome.vue'
 import DanhmuchangSidebar from '@/components/Danhmuchang/DanhmuchangSidebar.vue';
 import SanphamNoibat from '@/components/Sanpham/SanphamNoibat.vue';
+import Muanhieu from '@/components/Sanpham/Muanhieu.vue'
+import Danhgiacao from '@/components/Sanpham/Danhgiacao.vue'
+import Moiramat from '@/components/Sanpham/Moiramat.vue'
+import type { DetailProduct } from '@/models/detailProduct'
+import { onMounted, ref } from 'vue'
+import axios from 'axios'
+
+const homeProductGroups = ref({
+  bestSelling: [] as DetailProduct[],
+  topRated: [] as DetailProduct[],
+  newest: [] as DetailProduct[]
+})
+
+onMounted(async () => {
+  try {
+    const response = await axios.get('/api/home-product-groups')
+    homeProductGroups.value = response.data
+  } catch (error) {
+    console.error('Không thể tải các nhóm sản phẩm trang chủ:', error)
+  }
+})
 </script>
 
 <style>
@@ -298,7 +319,7 @@ import SanphamNoibat from '@/components/Sanpham/SanphamNoibat.vue';
                 data-animation-delay="200">
                 <div class="product-column">
                   <h3 class="section-sub-title ls-n-20">Đánh giá cao</h3>
-                  <!-- @await Component.InvokeAsync("Danhgia", new { view = "TopRated" }) -->
+                  <Danhgiacao :products="homeProductGroups.topRated" />
                   <!-- End .product-column -->
                 </div>
               </div>
@@ -308,7 +329,7 @@ import SanphamNoibat from '@/components/Sanpham/SanphamNoibat.vue';
                 data-animation-delay="500">
                 <div class="product-column">
                   <h3 class="section-sub-title ls-n-20">Bán chạy nhất</h3>
-                  <!-- @await Component.InvokeAsync("Chitietdonhang", new { view = "BestSales" }) -->
+                  <Muanhieu :products="homeProductGroups.bestSelling" />
                 </div>
                 <!-- End .product-column -->
               </div>
@@ -318,7 +339,7 @@ import SanphamNoibat from '@/components/Sanpham/SanphamNoibat.vue';
                 data-animation-delay="800">
                 <div class="product-column">
                   <h3 class="section-sub-title ls-n-20">Hàng mới về</h3>
-                  <!-- @await Component.InvokeAsync("Sanpham", new { view = "NewArrivals" }) -->
+                  <Moiramat :products="homeProductGroups.newest" />
                 </div>
                 <!-- End .product-column -->
               </div>
